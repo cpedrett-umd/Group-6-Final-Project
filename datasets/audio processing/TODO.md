@@ -1,0 +1,2 @@
+- Automate collection such that output is saved to csv
+- Explore different social media platforms and collect ad transcripts
