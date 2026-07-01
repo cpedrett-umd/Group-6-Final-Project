@@ -12,11 +12,21 @@ members:
   - name: <name>
     github: <handle>
     hat:
-north_star:
-  metric: Task success rate
-  value: 1.75/2
-  previous: 1/1
----
+
+Problem: Older adults and everyday internet users are often exposed to emotionally
+persuasive online advertisements that use urgency, fear, scarcity, social proof, or
+exaggerated claims to influence purchasing decisions without users recognizing the
+tactic being used.
+Solution: Our tool is designed to analyze the language current adverts use in order to
+determine if it is using an emotionally persuasive tactic.
+Why us: Our group combines real-world ad data collected from social media platforms
+with NLP and vision-language models to create an explainable, ethically focused
+system for analyzing persuasive advertising language, while maintaining a third-party,
+unbiased approach that avoids misleading classifications of ads as scams or false
+advertising.
+MVP: A user can analyze an advertisement and receive transparent feedback if that ad
+is using manipulative/persuasive language.
+
 
 ## Shipped this week
 - <what is now merged or deployed> 
@@ -24,7 +34,6 @@ north_star:
 We started developing the data collection pipeline for text and audio based ads. Text based ads were collected using the regular expressions library and speech from video based ads were collected using faster-whisper and WASAPI.
 
 ## User / validation learning
-- <what you learned + how you got it: an interview, usage data, a task test>
 
 Today, users usually deal with suspicious or persuasive ads in a manual and
 inconsistent way. Some users ignore the ad if it feels suspicious, while others click
@@ -33,23 +42,19 @@ the product or company, check Amazon reviews, search Reddit threads, read commen
 under the ad, ask friends or family members, or report the ad to the platform.
 
 ## Metrics snapshot
-- <metric>:
 
 No metrics to report yet
 
 ## Challenges / blockers
-- <what is hard, and what help you need>
 
 Audio transcription with api's (faster-whisper) use a capture rate that can cut off words. This leads to disconnected audio chuncks that lose meaning.
 
 ## Next week's goal
-- <the one thing>
 
 Fix audio transcription methodology.
 Finish data collection and merge different modalities into 1 dataset of ad text data.
 
 ## Individual contributions
-- <name> (<hat>): <what they did>  (evidence: PR #34, #12)
 - Chris (Engineering): I wrote a script using faster-whisper and WASAPI to capture system audio. This will be used to collect ads from various social media sources. https://github.com/cpedrett-umd/Group-6-Final-Project/pull/1
 
 ## Lean canvas changes (if any)
