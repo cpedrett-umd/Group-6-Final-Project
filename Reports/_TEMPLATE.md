@@ -13,9 +13,9 @@ members:
     github: <handle>
     hat:
 north_star:
-  metric: <e.g. task success rate>
-  value: <this week>
-  previous: <last week>
+  metric: Task success rate
+  value: 1.75/2
+  previous: 1/1
 ---
 
 ## Shipped this week
