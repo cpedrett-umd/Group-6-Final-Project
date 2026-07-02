@@ -122,9 +122,8 @@ pip install -r requirements.txt
 |---|---|
 | Chris Pedretti | Engineering, Data&Eval |
 | Shashank Ashoka | Architecture, OCR, Agents |
-| [Name] | Review insight layer, external evidence retrieval |
-| [Name] | App interface and browser extension |
-| [Name] | Evaluation, annotation, and documentation |
+| Ciara Cameron | Review insight layer, external evidence retrieval |
+| Jonathan Kim | App interface and browser extension |
 
 ---
 
