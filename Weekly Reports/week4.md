@@ -1,5 +1,5 @@
 ---
-team: TBD
+team: Persuasive Ad Explainer
 week: 4
 date: 6-24-2026
 members:
