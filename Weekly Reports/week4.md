@@ -6,9 +6,9 @@ members:
   - name: Chris Pedretti
     github: cpedrett-umd
     hat: Engineering | Data&Eval
-  - name: <name>
-    github: <handle>
-    hat:
+  - name: Shashank Ashoka
+    github:shashk09-coder 
+    hat: Architecture | OCR | Agents
   - name: <name>
     github: <handle>
     hat:
