@@ -7,7 +7,7 @@ members:
     github: cpedrett-umd
     hat: Engineering | Data&Eval
   - name: Shashank Ashoka
-    github:shashk09-coder 
+    github: shashk09-coder 
     hat: Architecture | OCR | Agents
   - name: <name>
     github: <handle>
