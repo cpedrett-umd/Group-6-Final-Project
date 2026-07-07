@@ -1,11 +1,11 @@
 ---
 team: <your-company-name>
-week: <NN>
+week: 6
 date: <YYYY-MM-DD>
 members:
-  - name: <name>
-    github: <handle>
-    hat: Product | Engineering | Data&Eval
+  - name: Ciara Cameron
+    github: Ciaracam
+    hat: Data&Eval
   - name: <name>
     github: <handle>
     hat: Product | Engineering | Data&Eval
@@ -28,13 +28,13 @@ north_star:
 - <metric>: <value> (was <previous>)
 
 ## Challenges / blockers
-- <what is hard, and what help you need>
+- Our initial dataset did not accurately reflect all of our persuasion labels. The dataset was heavily skewed toward urgency and scarcity language, while categories such as FOMO, social proof, authority, and fear appeal were less represented. We also realized that cleaning and labeling the dataset required more manual review than expected due to noisy OCR text, near-duplicate ads, and inconsistent advertisement quality.
 
 ## Next week's goal
 - <the one thing>
 
 ## Individual contributions
-- <name> (<hat>): <what they did>  (evidence: PR #34, #12)
+- Ciara (Data&Eval) : labeled an initial subset of ads, and developed a data-cleaning script to reduce noisy OCR text and near-duplicate entries.
 - <name> (<hat>): <what they did>  (evidence: ...)
 - <name> (<hat>): <what they did>  (evidence: ...)
 
