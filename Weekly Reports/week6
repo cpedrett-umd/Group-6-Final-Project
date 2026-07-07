@@ -22,14 +22,14 @@ north_star:
 - <what is now merged or deployed>  (evidence: #12, PR #34; link the live product if it is deployed)
 
 ## User / validation learning
-- <what you learned + how you got it: an interview, usage data, a task test>
+- Today, users usually deal with suspicious or persuasive ads in a manual and inconsistent way. Some users ignore the ad if it feels suspicious, while others click through and try to judge the product after seeing the landing page. They may Google the product or company, check Amazon reviews, search Reddit threads, read comments under the ad, ask friends or family members, or report the ad to the platform.
 
 ## Metrics snapshot
 - No metrics to report yet.
 
 ## Challenges / blockers
 - Our initial dataset did not accurately reflect all of our persuasion labels. The dataset was heavily skewed toward urgency and scarcity language, while categories such as FOMO, social proof, authority, and fear appeal were less represented. We also realized that cleaning and labeling the dataset required more manual review than expected due to noisy OCR text, near-duplicate ads, and inconsistent advertisement quality.
-- Audio speech recognition for video ads proved to be too inconsistent for collecting data, therefore we narrowed scope
+- Audio speech recognition for video ads proved to be too inconsistent for collecting data, therefore we narrowed scope.
 
 ## Next week's goal
 - Refine model architecure
