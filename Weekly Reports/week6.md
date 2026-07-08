@@ -1,7 +1,7 @@
 ---
 team: <your-company-name>
 week: 6
-date: <YYYY-MM-DD>
+date: <2026-07-08>
 members:
   - name: Ciara Cameron
     github: Ciaracam
