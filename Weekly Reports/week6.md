@@ -19,7 +19,7 @@ north_star:
 ---
 
 ## Shipped this week
-- <what is now merged or deployed>  (evidence: #12, PR #34; link the live product if it is deployed)
+- Drafted an architecture of the tranformer workflow using PyTorch. This includes a data loader, tokenizer, and the model. The data loader is responsible for taking a labeled dataset and performing text cleaning, word tokenizing, and building vocab. The model will use multi head self attention with an encoder block and classifier. We also plan to use supporting scripts for label parsing and classifying a single ad from a model checkpoint.
 
 ## User / validation learning
 - Today, users usually deal with suspicious or persuasive ads in a manual and inconsistent way. Some users ignore the ad if it feels suspicious, while others click through and try to judge the product after seeing the landing page. They may Google the product or company, check Amazon reviews, search Reddit threads, read comments under the ad, ask friends or family members, or report the ad to the platform.
@@ -34,10 +34,11 @@ north_star:
 ## Next week's goal
 - Refine model architecure
 - Finalize preprocessing and labeling dataset
+- Create pipeline for processing input into the model
 
 ## Individual contributions
 - Ciara (Data&Eval) : labeled an initial subset of ads, and developed a data-cleaning script to reduce noisy OCR text and near-duplicate entries.
-- Chris (Engineering | Data&Eval): Explored ASR pipeline for audio to text transcription for increasing modalities, drafted initial nlp model architecture in PyTorch.
+- Chris (Engineering | Data&Eval): Explored ASR pipeline for audio to text transcription for increasing modalities, drafted initial nlp model architecture in PyTorch. We are exploring a tokenizer to process textual data and a multi head self attention transformer to handle the classification task.
 - <name> (<hat>): <what they did>  (evidence: ...)
 
 ## Lean canvas changes (if any)
