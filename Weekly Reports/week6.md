@@ -38,7 +38,7 @@ north_star:
 
 ## Individual contributions
 - Ciara (Data&Eval) : labeled an initial subset of ads, and developed a data-cleaning script to reduce noisy OCR text and near-duplicate entries.
-- Chris (Engineering | Data&Eval): Explored ASR pipeline for audio to text transcription for increasing modalities, drafted initial nlp model architecture in PyTorch. We are exploring a tokenizer to process textual data and a multi head self attention transformer to handle the classification task.
+- Chris (Engineering | Data&Eval): Explored ASR pipeline for audio to text transcription for increasing modalities, drafted initial nlp model architecture in PyTorch. We are exploring a tokenizer to process textual data and a multi head self attention transformer to handle the classification task. See modeling for more info.
 - <name> (<hat>): <what they did>  (evidence: ...)
 
 ## Lean canvas changes (if any)
