@@ -9,9 +9,9 @@ members:
   - name: Shashank Ashoka
     github: shashk09-coder 
     hat: Architecture | OCR | Agents
-  - name: <name>
-    github: <handle>
-    hat:
+  - name: Ciara Cameron
+    github: Ciaracam
+    hat: Data Quality | Annotation | Evaluation
 north_star:
   metric: Task success rate
   value: 1.75/2
