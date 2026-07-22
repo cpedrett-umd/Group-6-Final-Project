@@ -1,2 +1,3 @@
 torch>=2.0
 pandas>=2.0
+transformers>=4.40   # subword tokenizer + base model for hf_tokenizer.py
