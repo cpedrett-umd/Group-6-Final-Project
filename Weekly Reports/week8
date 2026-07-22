@@ -9,8 +9,8 @@ members:
   - name: Chris Pedretti
     github: cpedrett-umd
     hat: Engineering | Data&Eval
-  - name: <name>
-    github: <handle>
+  - name: Jonathan Kim
+    github: jonathanjkim5108
     hat: Product | Engineering | Data&Eval
 north_star:
   metric: task success rate
