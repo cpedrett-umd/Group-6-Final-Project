@@ -1,9 +1,9 @@
-# modeling/ — tokenizer handoff
+# modeling/ — tokenizer
 
 This directory is **tokenizer-only**. It turns the labeled ads dataset into
 fixed-width tensors a pretrained transformer (`AutoModel`) can consume
 directly. Model architecture, training loop, and label encoding are **not**
-implemented here — that's the next step, owned by the model dev(s).
+implemented here — that's the next step, owned by the model devs.
 
 ## What's in here
 
@@ -105,7 +105,7 @@ This prints a profile (subword length percentiles, a sample tokenization) so
 you can sanity-check whether `--max-len 128` is still generous enough before
 saving.
 
-## Notes for whoever picks up model dev
+## Notes
 
 - **Labels are strings, not ints.** Build your own label2id mapping (the 7
   classes are listed above); nothing here assumes an encoding.
