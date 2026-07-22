@@ -7,12 +7,20 @@ implemented here — that's the next step, owned by the model devs.
 
 ## What's in here
 
+This directory holds the **code**; running it writes the tokenized
+**artifacts** into `../datasets/text_processing/` (next to the source CSV).
+
 | File | What it is |
 |---|---|
 | [hf_tokenizer.py](hf_tokenizer.py) | `AdsTokenizer` (wraps a HF `AutoTokenizer`) + the script that builds the artifacts below |
-| [tokenized_ads.pt](tokenized_ads.pt) | Pre-tokenized dataset, ready to load — see shapes below |
-| [ads_tokenizer/](ads_tokenizer/) | Saved tokenizer files (`tokenizer.json`, `tokenizer_config.json`) so inference reuses the exact same vocab |
 | [requirements.txt](requirements.txt) | `torch`, `pandas`, `transformers` |
+
+Generated artifacts (written to `../datasets/text_processing/`):
+
+| Artifact | What it is |
+|---|---|
+| [tokenized_ads.pt](../datasets/text_processing/tokenized_ads.pt) | Pre-tokenized dataset, ready to load — see shapes below |
+| [ads_tokenizer/](../datasets/text_processing/ads_tokenizer/) | Saved tokenizer files (`tokenizer.json`, `tokenizer_config.json`) so inference reuses the exact same vocab |
 
 Base model: **`distilbert-base-uncased`**, `max_len=128`.
 
@@ -24,7 +32,7 @@ pip install -r requirements.txt
 
 ```python
 import torch
-b = torch.load("tokenized_ads.pt", weights_only=False)
+b = torch.load("../datasets/text_processing/tokenized_ads.pt", weights_only=False)
 
 input_ids, attention_mask, labels = b["input_ids"], b["attention_mask"], b["labels"]
 ```
@@ -32,7 +40,7 @@ input_ids, attention_mask, labels = b["input_ids"], b["attention_mask"], b["labe
 ### Shapes / contents (as of this handoff)
 
 ```
->>> import torch; b = torch.load('tokenized_ads.pt', weights_only=False)
+>>> import torch; b = torch.load('../datasets/text_processing/tokenized_ads.pt', weights_only=False)
 >>> b['input_ids'].shape, b['input_ids'].dtype
 torch.Size([3230, 128]) torch.int64
 >>> b['attention_mask'].shape, b['attention_mask'].dtype
@@ -84,7 +92,7 @@ train/val/test split) instead of using the pre-baked `.pt` bundle:
 ```python
 from hf_tokenizer import AdsTokenizer, AdsHFDataset, load_ads
 
-tok = AdsTokenizer()  # or AdsTokenizer.from_pretrained("ads_tokenizer")
+tok = AdsTokenizer()  # or AdsTokenizer.from_pretrained("../datasets/text_processing/ads_tokenizer")
 texts, labels = load_ads("../datasets/text_processing/ads_dataset_labeled.csv")
 ds = AdsHFDataset(texts, labels, tok)
 inputs, label = ds[0]  # inputs = {"input_ids": ..., "attention_mask": ...}
@@ -92,13 +100,21 @@ inputs, label = ds[0]  # inputs = {"input_ids": ..., "attention_mask": ...}
 
 ## Regenerating the artifacts
 
-If the dataset changes, rebuild both the tensors and the saved tokenizer:
+If the dataset changes, rebuild both the tensors and the saved tokenizer.
+The script's defaults already read from and write to
+`../datasets/text_processing/`, so no arguments are needed:
+
+```bash
+python hf_tokenizer.py
+```
+
+Equivalent to spelling out the defaults:
 
 ```bash
 python hf_tokenizer.py \
     --data "../datasets/text_processing/ads_dataset_labeled.csv" \
-    --out-tensors tokenized_ads.pt \
-    --out-tokenizer ads_tokenizer
+    --out-tensors "../datasets/text_processing/tokenized_ads.pt" \
+    --out-tokenizer "../datasets/text_processing/ads_tokenizer"
 ```
 
 This prints a profile (subword length percentiles, a sample tokenization) so

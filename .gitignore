@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Hugging Face / model caches
+.cache/
+*.lock
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# NOTE: datasets/text_processing/tokenized_ads.pt is intentionally tracked as a
+# ready-to-load handoff artifact (see modeling/README.md). If you'd rather
+# regenerate it locally instead, uncomment the next line and `git rm --cached` it:
+# datasets/text_processing/tokenized_ads.pt

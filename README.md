@@ -16,7 +16,7 @@ Online advertisements routinely employ emotionally persuasive language to influe
 
 ## System Overview
 
-![System Architecture](workflow_ad_explainer.png)
+![System Architecture](docs/workflow_ad_explainer.png)
 
 The pipeline operates in four stages. A confused user who encounters an emotionally loaded ad submits it through one of two interfaces. The input processing layer normalizes the submission into raw text regardless of modality. The main analysis model produces two parallel outputs: a claim and persuasion analysis, and a review insight layer that grounds the analysis in external evidence. These are merged into a single friendly explanation returned to the user.
 
