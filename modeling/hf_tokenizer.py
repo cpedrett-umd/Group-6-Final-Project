@@ -9,8 +9,8 @@ Usage (as a library):
 Usage (as a script) — tokenize the dataset and save the artifact:
     python hf_tokenizer.py \
         --data "../datasets/text_processing/ads_dataset_labeled.csv" \
-        --out-tensors tokenized_ads.pt \
-        --out-tokenizer ads_tokenizer
+        --out-tensors "../datasets/text_processing/tokenized_ads.pt" \
+        --out-tokenizer "../datasets/text_processing/ads_tokenizer"
 """
 from __future__ import annotations
 
@@ -188,12 +188,12 @@ def main() -> None:
     parser.add_argument("--max-len", type=int, default=DEFAULT_MAX_LEN)
     parser.add_argument(
         "--out-tensors",
-        default=os.path.join(here, "tokenized_ads.pt"),
+        default=os.path.join(here, "..", "datasets", "text_processing", "tokenized_ads.pt"),
         help="where to save the tokenized tensors (.pt)",
     )
     parser.add_argument(
         "--out-tokenizer",
-        default=os.path.join(here, "ads_tokenizer"),
+        default=os.path.join(here, "..", "datasets", "text_processing", "ads_tokenizer"),
         help="directory to save the tokenizer files (for reuse at inference)",
     )
     args = parser.parse_args()
@@ -202,6 +202,7 @@ def main() -> None:
     bundle = tokenize_dataset(args.data, tokenizer)
     _print_profile(bundle, tokenizer)
 
+    os.makedirs(os.path.dirname(args.out_tensors), exist_ok=True)
     torch.save(bundle, args.out_tensors)
     tokenizer.save(args.out_tokenizer)
     print(f"\nsaved tensors    -> {args.out_tensors}")
