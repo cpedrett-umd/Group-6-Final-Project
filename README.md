@@ -1,4 +1,8 @@
-# Persuasion-Aware Ad Explainer: An NLP System for Detecting Emotionally Manipulative Advertising Tactics
+# AdInsight — Persuasion-Aware Ad Explainer
+
+*Helping users understand the persuasion behind every advertisement.*
+
+An NLP system for detecting emotionally manipulative advertising tactics.
 
 [Report](#) | [Demo](#) |
 
@@ -10,7 +14,7 @@ Jonathan Kim](https://github.com/Jonathan5108) .
 
 ## Abstract
 
-Online advertisements routinely employ emotionally persuasive language to influence consumer behavior — particularly targeting older adults with health, financial, and wellness products. We present a multi-modal NLP pipeline that ingests ad content from text, images, or video, detects persuasion tactics at the phrase level, and returns plain-language explanations alongside real-world review evidence. The system is designed for users aged 60 and older who encounter such ads on Facebook, Instagram, YouTube, and news websites, and who may lack a reliable method for evaluating ad credibility before engaging. Unlike approaches that classify ads as fraudulent or legally misleading, our system focuses on **awareness and transparency**: explaining *why* a piece of language is persuasive and *what tactic it employs*, without making legal judgments.
+Online advertisements routinely employ emotionally persuasive language to influence consumer behavior — particularly targeting older adults with health, financial, and wellness products. We present a multi-modal NLP pipeline that ingests ad content from text or images, detects persuasion tactics at the phrase level, and returns plain-language explanations alongside real-world review evidence. The system is designed for users aged 60 and older who encounter such ads on Facebook, Instagram, YouTube, and news websites, and who may lack a reliable method for evaluating ad credibility before engaging. Unlike approaches that classify ads as fraudulent or legally misleading, our system focuses on **awareness and transparency**: explaining *why* a piece of language is persuasive and *what tactic it employs*, without making legal judgments.
 
 ---
 
@@ -28,21 +32,20 @@ The pipeline operates in four stages. A confused user who encounters an emotiona
 
 The system accepts ad content through two surfaces:
 
-**App** — Users upload ad text, a screenshot, or a video recording directly.
+**App** — Users upload ad text or a screenshot directly.
 
-**Browser Extension** — Users drag, highlight, or drop an ad region, text block, image, or video from any webpage.
+**Browser Extension** — Users drag, highlight, or drop an ad region, text block, or image from any webpage.
 
 ### Input Processing Layer
 
-Raw submissions are routed through three parallel processors depending on modality:
+Raw submissions are routed through two parallel processors depending on modality:
 
 | Input Type | Processor |
 |---|---|
-| Video or voice recording | Voice agent (ASR transcription) |
 | Image or screenshot | OCR (optical character recognition) |
 | Raw ad text | Text processor (direct tokenization) |
 
-All three paths emit a unified extracted-text representation passed downstream.
+Both paths emit a unified extracted-text representation passed downstream.
 
 ### Main Analysis Model
 
@@ -83,6 +86,41 @@ The two analysis branches are merged into a **friendly user explanation**: a cle
 The primary user group is adults aged 60 and older. This group is disproportionately exposed to ads for health products, supplements, insurance, and financial services, and may encounter persuasion techniques — personal relevance framing, pseudo-scientific language, and artificial scarcity — that are difficult to identify without prior media literacy exposure. The system is designed to require no technical knowledge to use.
 
 The tool generalizes to any consumer affected by emotionally persuasive advertising, including younger users encountering influencer marketing, FOMO-driven promotions, or misleading wellness claims.
+
+---
+
+## Project Status (Midsemester)
+
+**Decision: persevere.** The problem — and users' appetite for third-party
+evidence — is validated by published consumer research (FTC Consumer Sentinel,
+AARP fraud surveys, BrightLocal, YouGov). The data engine works. The main open
+question is usability, which drives the second half of the semester.
+
+**Built so far — the data engine.** A multi-modal collection pipeline funnels
+two input types into one labeled dataset:
+
+- **7,768** ad texts in the unified dataset
+- **2** input modalities piloted — text (regex-based ad-copy scraping) and
+  image (OCR over ad screenshots)
+- **8** annotation labels — the 7 persuasion tactics above plus *neutral* —
+  with written [labeling guidelines](docs/labeling_guidelines.md)
+- A HuggingFace subword tokenizer ([modeling/](modeling/)) that prepares the
+  text for the classifier
+
+**Scope change — audio dropped.** Voice/video (ASR) collection proved
+inconsistent and hard to standardize, so the audio modality was removed and
+effort was redirected to text and image. (Prior ASR work is retained under
+`datasets/audio_processing (deprecated)/`.)
+
+**North-star metric:** macro F1 across the 7 persuasion-tactic classes.
+
+### Road to demo day
+
+1. Merge & annotate the multi-modal dataset
+2. Train & evaluate the tactic classifier (CLIP baseline)
+3. Build the explanation & review-insight layers
+4. Ship the app & browser-extension MVP
+5. Usability tests with adults 60+ → demo day
 
 ---
 
