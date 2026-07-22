@@ -35,7 +35,7 @@ north_star:
 - Create tokenizer and tokenize the labeled dataset
 
 ## Individual contributions
-- Ciara (Data&Eval) : Worked on midsemester presentation, labeled an initial subset of ads, and developed a data-cleaning script to reduce noisy OCR text and near-duplicate entries.
+- Ciara (Data&Eval) : Worked on midsemester presentation, expanded the advertisement dataset by manually collecting additional ads, and improved representation across persuasion categories.
 - Chris (Engineering | Data&Eval): Worked on midsemester presentation, drafted end product wireframe, and drafted the tokenizer for NLP model ingestion.
 - Jonathan (Data&Eval) : Worked on midsemester presentation, data preprocessing techniques, and baseline NLP model creation
 
