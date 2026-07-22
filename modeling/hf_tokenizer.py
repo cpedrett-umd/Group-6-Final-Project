@@ -1,22 +1,5 @@
 """Subword tokenizer for the ads dataset, built on a pretrained base model.
 
-Wraps a HuggingFace ``AutoTokenizer`` (DistilBERT by default) so ad text can
-be fed straight into a pretrained transformer. This reuses the base model's
-own subword vocabulary — the only tokenization a pretrained ``AutoModel`` will
-accept, since its embedding table is indexed by that exact vocabulary.
-
-Why subword over word2vec for a "base NLP model": a pretrained transformer
-already ships contextual embeddings that beat static word2vec vectors on small
-datasets like this one (~3k ads), and it *requires* its paired subword
-tokenizer — you cannot hand it word2vec ids. So the most applicable tokenizer
-for passing to a base NLP model is the model's own subword tokenizer.
-
-This module is intentionally label-agnostic: model development and the label
-scheme are handled by other devs. It turns the ``ad_text`` column into
-``input_ids`` / ``attention_mask`` tensors and carries the ``label`` column
-through untouched, so downstream code is free to encode labels however it
-wants.
-
 Usage (as a library):
     from hf_tokenizer import AdsTokenizer
     tok = AdsTokenizer()                     # distilbert-base-uncased
