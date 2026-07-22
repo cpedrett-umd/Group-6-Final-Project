@@ -19,7 +19,7 @@ north_star:
 ---
 
 ## Shipped this week
-- Drafted an architecture of the tranformer workflow using PyTorch. This includes a data loader, tokenizer, and the model. The data loader is responsible for taking a labeled dataset and performing text cleaning, word tokenizing, and building vocab. The model will use multi head self attention with an encoder block and classifier. We also plan to use supporting scripts for label parsing and classifying a single ad from a model checkpoint.
+- Planned tasks following processed dataset, including the tokenizer and baseline NLP model
 
 ## User / validation learning
 - Today, users usually deal with suspicious or persuasive ads in a manual and inconsistent way. Some users ignore the ad if it feels suspicious, while others click through and try to judge the product after seeing the landing page. They may Google the product or company, check Amazon reviews, search Reddit threads, read comments under the ad, ask friends or family members, or report the ad to the platform.
@@ -28,13 +28,11 @@ north_star:
 - No metrics to report yet.
 
 ## Challenges / blockers
-- Our initial dataset did not accurately reflect all of our persuasion labels. The dataset was heavily skewed toward urgency and scarcity language, while categories such as FOMO, social proof, authority, and fear appeal were less represented. We also realized that cleaning and labeling the dataset required more manual review than expected due to noisy OCR text, near-duplicate ads, and inconsistent advertisement quality.
-- Audio speech recognition for video ads proved to be too inconsistent for collecting data, therefore we narrowed scope.
+- None this week
 
 ## Next week's goal
-- Refine model architecure
-- Finalize preprocessing and labeling dataset
-- Create pipeline for processing input into the model
+- Define model architecure
+- Create tokenizer and tokenize the labeled dataset
 
 ## Individual contributions
 - Ciara (Data&Eval) : labeled an initial subset of ads, and developed a data-cleaning script to reduce noisy OCR text and near-duplicate entries.
