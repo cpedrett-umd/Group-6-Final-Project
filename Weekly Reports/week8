@@ -13,9 +13,9 @@ members:
     github: <handle>
     hat: Product | Engineering | Data&Eval
 north_star:
-  metric: <e.g. task success rate>
-  value: <this week>
-  previous: <last week>
+  metric: task success rate
+  value: 100%
+  previous: 100%
 ---
 
 ## Shipped this week
@@ -40,4 +40,4 @@ north_star:
 - Jonathan (Data&Eval) : Worked on data preprocessing techniques and baseline NLP model creation
 
 ## Lean canvas changes (if any)
-- Shifted away from OCR and ASR and decided to focus on purely textual ad data.
+- Shifted away from ASR/audio modality and decided to focus on purely textual ad data.
