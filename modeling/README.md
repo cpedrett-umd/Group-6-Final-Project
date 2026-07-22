@@ -1,4 +1,4 @@
-# modeling/ — tokenizer handoff
+# modeling/ — tokenizer
 
 This directory is **tokenizer-only**. It turns the labeled ads dataset into
 fixed-width tensors a pretrained transformer (`AutoModel`) can consume
