@@ -90,30 +90,51 @@ The tool generalizes to any consumer affected by emotionally persuasive advertis
 
 ```
 Group-6-Final-Project/
-├── data/
-│   ├── raw/                    # Collected ad samples
-│   └── labeled/                # Annotated persuasion tactic dataset
-├── src/
-│   ├── input_processing/       # OCR, ASR, and text normalization modules
-│   ├── analysis/               # Persuasion classifier and claim checker
-│   ├── review_layer/           # Reddit and review scraping + retrieval
-│   └── explanation/            # Plain-language output generation
-├── extension/                  # Browser extension source
-├── app/                        # Mobile/web app interface
-├── notebooks/                  # Experiments and evaluation
-├── tests/
+├── datasets/
+│   ├── text_processing/                    # Ad-text dataset + tokenizer artifacts
+│   │   ├── ads_dataset_labeled.csv         # Labeled dataset (3,230 ads, 7 tactic classes)
+│   │   ├── ads_tokenizer/                  # Saved HF tokenizer (vocab + config)
+│   │   ├── tokenized_ads.pt                # Pre-tokenized dataset, ready to load
+│   │   ├── label_ads.py                    # Labeling helper script
+│   │   ├── main.py                         # Dataset cleaning / build script
+│   │   ├── requirements.txt
+│   │   └── ads_dataset_*(deprecated).csv   # Earlier dataset iterations, kept for reference
+│   └── audio_processing (deprecated)/      # Prior ASR experiment (video ads)
+├── modeling/                               # Tokenizer for the base NLP model
+│   ├── hf_tokenizer.py                     # AdsTokenizer + dataset-tokenization script
+│   ├── requirements.txt
+│   └── README.md                           # Tokenizer usage + artifact details
+├── docs/                                   # Project docs and reference material
+│   ├── project_overview.pdf
+│   ├── labeling_guidelines.md
+│   └── workflow_ad_explainer.png           # System architecture diagram
+├── weekly_reports/                         # Per-week progress reports
+├── .gitignore
 └── README.md
 ```
+
+The abstract above describes the full planned system (multimodal input, analysis
+model, review layer, app, and extension). The repository currently covers the
+**data and tokenization** groundwork — the labeled dataset, its cleaning
+scripts, and the HuggingFace subword tokenizer that feeds the downstream model.
 
 ---
 
 ## Installation
 
 ```bash
-git clone https://github.com/your-org/Group-6-Final-Project.git
+git clone https://github.com/cpedrett-umd/Group-6-Final-Project.git
 cd Group-6-Final-Project
-pip install -r requirements.txt
+
+# Tokenizer (modeling/) — subword tokenization for the base NLP model
+pip install -r modeling/requirements.txt
+
+# Dataset cleaning / labeling scripts (datasets/text_processing/)
+pip install -r "datasets/text_processing/requirements.txt"
 ```
+
+See [modeling/README.md](modeling/README.md) for how to load the pre-tokenized
+dataset or regenerate the tokenizer artifacts.
 
 
 ## Team
