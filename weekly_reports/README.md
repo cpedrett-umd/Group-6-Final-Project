@@ -5,7 +5,7 @@ Each team commits one report here before every lecture, named `weekNN.md`
 
 ## How to use the template
 
-1. Copy [`_TEMPLATE.md`](_TEMPLATE.md) to `weekNN.md` for the current week.
+1. Copy [`_template.md`](_template.md) to `weekNN.md` for the current week.
 2. Fill in every section.
 3. Back every claim with a link to the issue, pull request, or commit that proves it.
    A claim with no linked evidence does not count.

@@ -25,7 +25,7 @@ Usage (as a library):
 
 Usage (as a script) — tokenize the dataset and save the artifact:
     python hf_tokenizer.py \
-        --data "../datasets/text processing/ads_dataset_labeled.csv" \
+        --data "../datasets/text_processing/ads_dataset_labeled.csv" \
         --out-tensors tokenized_ads.pt \
         --out-tokenizer ads_tokenizer
 """
@@ -198,7 +198,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Tokenize the ads dataset.")
     parser.add_argument(
         "--data",
-        default=os.path.join(here, "..", "datasets", "text processing", "ads_dataset_labeled.csv"),
+        default=os.path.join(here, "..", "datasets", "text_processing", "ads_dataset_labeled.csv"),
         help="input CSV with ad_text,label columns",
     )
     parser.add_argument("--model", default=DEFAULT_MODEL, help="base model / tokenizer name")
