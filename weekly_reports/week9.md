@@ -37,7 +37,7 @@ north_star:
 ## Individual contributions
 - Chris (Engineering | Data&Eval): Wrote `hf_tokenizer.py` (HuggingFace DistilBERT-based `AdsTokenizer`), removed the old custom dataset/tokenizer/model pipeline in favor of it, and tokenized `ads_dataset_labeled.csv`, saving the tensors to `tokenized_ads.pt` and the tokenizer to `ads_tokenizer/`. (evidence: commit 845a68a)
 - Ciara (Data&Eval): <update>
-- Jonathan (Product | Engineering | Data&Eval): <update>
+- Jonathan (Product | Engineering | Data&Eval): Experimenting with tokenized inputs in training of the baseline model
 
 ## Lean canvas changes (if any)
 - <update>
