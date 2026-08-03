@@ -32,3 +32,7 @@ Thumbs.db
 # ready-to-load handoff artifact (see modeling/README.md). If you'd rather
 # regenerate it locally instead, uncomment the next line and `git rm --cached` it:
 # datasets/text_processing/tokenized_ads.pt
+
+# Model weights
+modeling/baseline_distilbert_model/
+*.safetensors

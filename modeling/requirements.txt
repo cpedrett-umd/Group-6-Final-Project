@@ -1,3 +1,5 @@
 torch>=2.0
 pandas>=2.0
 transformers>=4.40   # subword tokenizer + base model for hf_tokenizer.py
+scikit-learn>=1.4
+numpy>=1.26
