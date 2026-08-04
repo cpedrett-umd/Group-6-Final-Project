@@ -470,6 +470,100 @@
     true
   );
 
+  /* ── Trigger 1b: hover sensors over ad iframes ──────────────── */
+
+  /* A pointer over a cross-origin iframe delivers NO events to this page —
+   * verified live: entering Yahoo's ad iframe produced nothing, not even a
+   * boundary mouseout. No listener can see it. So for detected ad iframes we
+   * lay our own transparent sensor over the ad's box; the sensor is ours, sits
+   * above the iframe, and receives real events unconditionally.
+   *
+   * The sensor also intercepts clicks on the ad, turning them into analysis
+   * instead of navigation. For this tool that is the point, not a side effect:
+   * the audience is people one impulse-click away from a scam, and the
+   * wireframe's whole interaction is "the ad gets an explain button". */
+
+  const sensors = new Map(); // ad element -> sensor div
+
+  function syncSensors() {
+    const frames = document.querySelectorAll("iframe, video");
+    const wanted = new Set();
+
+    frames.forEach((element) => {
+      const isAd =
+        element.tagName === "VIDEO" ? false : isAdFrame(element);
+      if (!isAd) return;
+
+      const rect = element.getBoundingClientRect();
+      if (!isSensibleSlotSize(rect) || !isOnScreen(rect)) return;
+
+      wanted.add(element);
+
+      let sensor = sensors.get(element);
+
+      if (!sensor) {
+        sensor = document.createElement("div");
+        sensor.className = "ai-sensor";
+
+        sensor.addEventListener("mouseenter", () => {
+          cancelHide();
+          showPill(element.getBoundingClientRect(), { captureElement: element });
+        });
+
+        sensor.addEventListener("mouseleave", scheduleHide);
+
+        sensor.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          hidePill();
+          runCapture(element.getBoundingClientRect());
+        });
+
+        wrap.append(sensor);
+        sensors.set(element, sensor);
+      }
+
+      sensor.style.left = `${rect.left}px`;
+      sensor.style.top = `${rect.top}px`;
+      sensor.style.width = `${rect.width}px`;
+      sensor.style.height = `${rect.height}px`;
+      sensor.hidden = false;
+    });
+
+    // Drop sensors whose ad went away or scrolled out.
+    sensors.forEach((sensor, element) => {
+      if (!wanted.has(element)) {
+        if (!document.contains(element)) {
+          sensor.remove();
+          sensors.delete(element);
+        } else {
+          sensor.hidden = true;
+        }
+      }
+    });
+  }
+
+  // Ads load late and move with the page; keep sensors in step by reacting to
+  // the DOM instead of polling. An ad appearing is a childList mutation; ads
+  // moving is a scroll or resize. The debounce coalesces mutation storms
+  // (SPA pages fire hundreds per second while hydrating).
+  let syncTimer = null;
+
+  function queueSync() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncSensors, 300);
+  }
+
+  syncSensors();
+
+  new MutationObserver(queueSync).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+
+  window.addEventListener("scroll", syncSensors, { passive: true });
+  window.addEventListener("resize", syncSensors);
+
   /* ── Trigger 2: selecting text ──────────────────────────────── */
 
   document.addEventListener("mouseup", (event) => {

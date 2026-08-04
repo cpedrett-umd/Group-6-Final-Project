@@ -55,6 +55,20 @@
 .ai-pill[hidden] { display: none; }
 .ai-pill svg { display: block; }
 
+/* ── Ad-iframe hover sensors ────────────────────────────────── */
+
+/* Transparent overlays sitting exactly on detected ad iframes, so the pointer
+   entering an ad is observable at all (the iframe's own document swallows
+   every event otherwise). Below the pill and panel so both stay clickable. */
+.ai-sensor {
+  position: fixed;
+  background: transparent;
+  cursor: pointer;
+  z-index: 0;
+}
+
+.ai-sensor[hidden] { display: none; }
+
 /* ── Pick mode ──────────────────────────────────────────────── */
 
 /* Drawn as our own box rather than an outline on the page's element, so the

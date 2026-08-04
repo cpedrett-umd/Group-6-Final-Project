@@ -194,6 +194,86 @@ describe("pill placement", () => {
   });
 });
 
+describe("ad-iframe hover sensors", () => {
+  // A real pointer over a cross-origin iframe emits nothing the parent can
+  // hear (verified live on Yahoo), so a transparent sensor overlays each ad
+  // iframe and hears the events instead.
+
+  function withSensor(env) {
+    const iframe = env.document.createElement("iframe");
+    iframe.src = "https://safeframe.googlesyndication.com/ad";
+    env.document.body.append(iframe);
+    setRect(iframe, { left: 200, top: 150, width: 728, height: 90 });
+
+    // syncSensors runs at injection before this iframe existed; force a pass.
+    env.window.dispatchEvent(new env.window.Event("resize"));
+
+    const sensor = env.host.shadowRoot.querySelector(".ai-sensor:not([hidden])");
+    return { iframe, sensor };
+  }
+
+  it("lays a sensor exactly over a detected ad iframe", async () => {
+    const env = createEnvironment();
+    const { sensor } = withSensor(env);
+
+    assert.ok(sensor, "no sensor created for the ad iframe");
+    assert.equal(sensor.style.left, "200px");
+    assert.equal(sensor.style.top, "150px");
+    assert.equal(sensor.style.width, "728px");
+    assert.equal(sensor.style.height, "90px");
+  });
+
+  it("does not lay sensors over ordinary iframes", () => {
+    const env = createEnvironment();
+    const plain = env.document.createElement("iframe");
+    plain.src = "https://www.youtube.com/embed/xyz";
+    env.document.body.append(plain);
+    setRect(plain, { left: 0, top: 0, width: 560, height: 315 });
+
+    env.window.dispatchEvent(new env.window.Event("resize"));
+
+    assert.equal(env.host.shadowRoot.querySelector(".ai-sensor:not([hidden])"), null);
+  });
+
+  it("entering the sensor shows the pill", async () => {
+    const env = createEnvironment();
+    const { sensor } = withSensor(env);
+
+    sensor.dispatchEvent(new env.window.MouseEvent("mouseenter"));
+    await tick(env.window);
+
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, false);
+  });
+
+  it("clicking the ad area analyzes instead of navigating", async () => {
+    const env = createEnvironment({
+      respond: (m) => {
+        if (m.type === "captureRegion") return { ok: true, captured: true };
+        return { ok: true, data: analysisFixture({ source: { mode: "image", ocr: { confidence: 0.9, line_count: 1, repaired: false } } }) };
+      },
+    });
+    const { sensor } = withSensor(env);
+
+    const click = new env.window.MouseEvent("click", { bubbles: true, cancelable: true });
+    sensor.dispatchEvent(click);
+    await tick(env.window, 150);
+
+    assert.equal(click.defaultPrevented, true, "ad navigation was not blocked");
+    assert.ok(env.sent.some((m) => m.type === "captureRegion"), "click did not capture");
+    assert.equal(env.shadow.querySelector(".ai-state.is-active").dataset.state, "result");
+  });
+
+  it("hides the sensor when its ad scrolls out of view", () => {
+    const env = createEnvironment();
+    const { iframe, sensor } = withSensor(env);
+
+    setRect(iframe, { left: 200, top: 5000, width: 728, height: 90 });
+    env.window.dispatchEvent(new env.window.Event("resize"));
+
+    assert.equal(sensor.hidden, true);
+  });
+});
+
 describe("small banners and labeled native ads", () => {
   it("offers the pill on a 320x50 mobile banner iframe", async () => {
     // Standard small banner sizes failed the old 120x80 floor entirely.
