@@ -95,12 +95,24 @@ def index():
 
 @app.get("/demo-page")
 def demo_page():
-    """A stand-in news article carrying a sponsored ad.
+    """A stand-in news article carrying every kind of ad the extension handles.
 
     The extension needs a real page to overlay. This gives the demo a fixed,
-    offline target instead of hunting for a live ad mid-presentation.
+    offline target instead of hunting for a live ad mid-presentation — and a
+    safe one: testing hover/capture on third-party sites means injecting into
+    a signed-in browser profile, which this page exists to avoid.
+
+    Fixtures: a marked-up text ad, an iframe ad slot (exercises the hover
+    sensor + screenshot capture), and a "Sponsored"-labeled card with no
+    ad-ish markup (exercises label detection).
     """
     return send_from_directory(app.static_folder, "demo-page.html")
+
+
+@app.get("/fake-ad")
+def fake_ad():
+    """The creative inside the demo page's iframe ad slot."""
+    return send_from_directory(app.static_folder, "fake-ad.html")
 
 
 @app.get("/api/health")

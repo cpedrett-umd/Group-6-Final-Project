@@ -135,6 +135,24 @@
     carry no regulatory definition in this context, and the studies invoked are
     often small, unpublished, or funded by the seller.</p>
 
+    <!-- Iframe ad fixture: named so the extension's ad-frame detector treats
+         it like a real third-party slot (safeframe), exercising the hover
+         sensor + screenshot-capture path against a local, safe target. -->
+    <div style="margin:34px 0; text-align:center;">
+      <iframe src="/fake-ad" name="safeframe-demo-slot" title="demo ad slot"
+              width="728" height="120" style="border:1px solid #ddd; max-width:100%;"
+              scrolling="no"></iframe>
+    </div>
+
+    <!-- Labeled native ad fixture: no ad-ish class names anywhere — the only
+         tell is the visible "Sponsored" caption, like Yahoo's feed cards. -->
+    <div class="feed-card" style="border:1px solid #ddd; border-radius:6px; padding:20px; margin:34px 0; font-family:Arial,sans-serif;">
+      <p style="margin:0 0 6px; color:#888; font-size:12px; letter-spacing:1.2px; text-transform:uppercase;">Sponsored</p>
+      <h3 style="margin:0 0 10px; font-size:21px;">Seniors born before 1965 rush to claim this benefit</h3>
+      <p style="margin:0; font-size:16px; line-height:1.5;">Thousands are already claiming theirs — don't miss out before the
+      deadline. Experts approved, guaranteed results, and spots are limited.</p>
+    </div>
+
     <p>Consumer advocates suggest a simple habit: before acting on any health
     claim in an advertisement, look for the specific study, the specific
     researcher, and the specific institution. If none of the three can be
