@@ -256,7 +256,7 @@ describe("ad-iframe hover sensors", () => {
 
     const click = new env.window.MouseEvent("click", { bubbles: true, cancelable: true });
     sensor.dispatchEvent(click);
-    await tick(env.window, 150);
+    await tick(env.window, 300);
 
     assert.equal(click.defaultPrevented, true, "ad navigation was not blocked");
     assert.ok(env.sent.some((m) => m.type === "captureRegion"), "click did not capture");
@@ -371,7 +371,9 @@ describe("small banners and labeled native ads", () => {
     assert.equal(pill.hidden, false);
 
     pill.click();
-    await tick(env.window, 120);
+    // runCapture waits a painted frame + 90ms before phase 1 (so the pill
+    // can't photograph itself into the ad); give it room.
+    await tick(env.window, 300);
     assert.ok(env.sent.some((m) => m.type === "captureRegion"), "image-only labeled ad did not capture");
   });
 });
@@ -758,7 +760,7 @@ describe("screenshot capture (video / iframe ads)", () => {
     assert.equal(pill.hidden, false, "no pill on iframe entry via mouseout");
 
     pill.click();
-    await tick(env.window, 150);
+    await tick(env.window, 300);
     assert.ok(env.sent.some((m) => m.type === "captureRegion"));
   });
 
@@ -779,7 +781,7 @@ describe("screenshot capture (video / iframe ads)", () => {
     assert.equal(pill.style.top, "316px");
 
     pill.click();
-    await tick(env.window, 150);
+    await tick(env.window, 300);
 
     const capture = env.sent.find((m) => m.type === "captureRegion");
     assert.ok(capture, "pill click did not start a capture");
@@ -809,7 +811,7 @@ describe("screenshot capture (video / iframe ads)", () => {
     assert.equal(pill.hidden, false, "no pill on text-less ad container");
 
     pill.click();
-    await tick(env.window, 150);
+    await tick(env.window, 300);
     assert.ok(env.sent.some((m) => m.type === "captureRegion"));
   });
 
@@ -836,7 +838,7 @@ describe("screenshot capture (video / iframe ads)", () => {
 
     mouse(env.window, iframe, "contextmenu", { clientX: 400, clientY: 200 });
     env.dispatchRuntimeMessage({ type: "captureRequested" });
-    await tick(env.window, 150);
+    await tick(env.window, 300);
 
     assert.ok(env.sent.some((m) => m.type === "analyzeCapture"));
     assert.equal(
@@ -867,7 +869,7 @@ describe("screenshot capture (video / iframe ads)", () => {
     const iframe = addAdIframe(env);
     mouse(env.window, iframe, "contextmenu", { clientX: 400, clientY: 200 });
     env.dispatchRuntimeMessage({ type: "captureRequested" });
-    await tick(env.window, 150);
+    await tick(env.window, 300);
 
     assert.equal(panelVisibleAtCapture, false, "panel was up during the screenshot");
   });
