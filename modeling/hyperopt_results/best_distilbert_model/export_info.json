@@ -1,0 +1,5 @@
+{
+  "dtype": "float16",
+  "note": "Cast to float32 at load time by app/predict.py.",
+  "test_macro_f1": 0.8956
+}

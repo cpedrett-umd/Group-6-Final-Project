@@ -28,12 +28,25 @@ Thumbs.db
 # Notebook checkpoints
 .ipynb_checkpoints/
 
+# Node (extension test runner only - the extension itself ships no deps)
+node_modules/
+package-lock.json
+
+# pytest
+.pytest_cache/
+
 # NOTE: datasets/text_processing/tokenized_ads.pt is intentionally tracked as a
 # ready-to-load handoff artifact (see modeling/README.md). If you'd rather
 # regenerate it locally instead, uncomment the next line and `git rm --cached` it:
 # datasets/text_processing/tokenized_ads.pt
 
 # Model weights
+#
+# The tuned classifier IS committed, through Git LFS (see .gitattributes) --
+# `git clone` gets working weights with no extra step. It is stored as float16
+# (134 MB): float32 would be 268 MB, and changes none of the 485 held-out test
+# predictions, so the extra precision is pure clone cost. Run
+# `modeling/compress_model.py` after any retrain, before committing.
+#
+# The baseline model is a scratch experiment and stays out of the repo.
 modeling/baseline_distilbert_model/
-*.safetensors
-modeling/hyperopt_results/best_distilbert_model/
