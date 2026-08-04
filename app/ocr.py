@@ -211,20 +211,27 @@ def extract_text(image_bytes: bytes) -> dict:
         return {
             "text": "",
             "raw_text": "",
+            "lines": [],
             "confidence": 0.0,
             "line_count": 0,
             "backend": backend,
             "repaired": False,
         }
 
-    raw_text = " ".join(line.strip() for line in lines if line.strip())
-    text = " ".join(repair_spacing(line.strip()) for line in lines if line.strip())
+    raw_lines = [line.strip() for line in lines if line.strip()]
+    repaired_lines = [repair_spacing(line) for line in raw_lines]
+
+    raw_text = " ".join(raw_lines)
+    text = " ".join(repaired_lines)
 
     confidence = sum(scores) / len(scores) if scores else 0.0
 
     return {
         "text": text,
         "raw_text": raw_text,
+        # Per-line output so multi-frame captures (animated/video ads) can be
+        # merged with line-level dedup instead of concatenating whole frames.
+        "lines": repaired_lines,
         "confidence": round(confidence, 4),
         "line_count": len(lines),
         "backend": backend,

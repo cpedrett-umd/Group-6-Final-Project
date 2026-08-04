@@ -294,7 +294,7 @@ describe("popup routing", () => {
 
 describe("region capture (video / iframe ads)", () => {
   const SENDER = { tab: { id: 7 } };
-  const REGION = { left: 100, top: 200, width: 600, height: 300, devicePixelRatio: 2 };
+  const REGION = { left: 100, top: 200, width: 600, height: 300, devicePixelRatio: 2, gapMs: 0 };
 
   it("registers the screenshot context-menu item on every context", () => {
     const { menus } = loadWorker();
@@ -331,7 +331,7 @@ describe("region capture (video / iframe ads)", () => {
     const worker = loadWorker({ captureSize: { width: 1000, height: 1600 } });
 
     const captured = await worker.send(
-      { type: "captureRegion", region: { left: 100, top: 0, width: 600, height: 300, devicePixelRatio: 2 } },
+      { type: "captureRegion", region: { left: 100, top: 0, width: 600, height: 300, devicePixelRatio: 2, gapMs: 0 } },
       SENDER
     );
 
@@ -345,7 +345,7 @@ describe("region capture (video / iframe ads)", () => {
     const worker = loadWorker();
 
     const captured = await worker.send(
-      { type: "captureRegion", region: { left: 0, top: 0, width: 10, height: 10, devicePixelRatio: 1 } },
+      { type: "captureRegion", region: { left: 0, top: 0, width: 10, height: 10, devicePixelRatio: 1, gapMs: 0 } },
       SENDER
     );
 
@@ -353,7 +353,17 @@ describe("region capture (video / iframe ads)", () => {
     assert.match(captured.error, /too small/);
   });
 
-  it("phase 2 posts the cropped blob to the analyze endpoint", async () => {
+  it("bursts several frames so animated ads aren't caught mid-transition", async () => {
+    const worker = loadWorker();
+
+    const captured = await worker.send({ type: "captureRegion", region: REGION }, SENDER);
+
+    assert.equal(captured.ok, true);
+    assert.equal(captured.frames, 3);
+    assert.equal(worker.drawCalls.length, 3, "expected one crop per frame");
+  });
+
+  it("phase 2 posts every captured frame to the analyze endpoint", async () => {
     const worker = loadWorker({
       fetchImpl: () => jsonResponse({ source: { mode: "image" } }),
     });
@@ -364,7 +374,7 @@ describe("region capture (video / iframe ads)", () => {
     assert.equal(result.ok, true);
     assert.equal(worker.calls[0].url, "http://127.0.0.1:5000/api/analyze");
     assert.ok(worker.calls[0].options.body instanceof FormData);
-    assert.ok(worker.calls[0].options.body.get("image"));
+    assert.equal(worker.calls[0].options.body.getAll("image").length, 3);
   });
 
   it("phase 2 without a capture reports expiry, not a crash", async () => {

@@ -763,6 +763,30 @@
     return null;
   }
 
+  const captureToast = document.createElement("div");
+  captureToast.className = "ai-capture-toast";
+  captureToast.hidden = true;
+  captureToast.textContent = "Photographing the ad — a few seconds…";
+  wrap.append(captureToast);
+
+  function showCaptureToast(adRect) {
+    // Never inside the region being photographed. Bottom-center unless the ad
+    // reaches down there, then top-center; a truly full-screen ad gets no
+    // toast rather than a toast in the shot.
+    const nearBottom = adRect.bottom > window.innerHeight - 90;
+    const nearTop = adRect.top < 90;
+
+    if (nearBottom && nearTop) return;
+
+    captureToast.style.top = nearBottom ? "18px" : "";
+    captureToast.style.bottom = nearBottom ? "" : "18px";
+    captureToast.hidden = false;
+  }
+
+  function hideCaptureToast() {
+    captureToast.hidden = true;
+  }
+
   async function captureAndAnalyze() {
     const rect = captureTargetRect();
 
@@ -795,6 +819,12 @@
       requestAnimationFrame(() => setTimeout(resolve, 90))
     );
 
+    // The burst takes ~2.5s (animated ads are photographed several times so a
+    // rotating message isn't missed). The pill and panel must stay hidden that
+    // whole time, so a small toast — positioned OFF the ad so it cannot
+    // photograph itself in — is the only feedback.
+    showCaptureToast(rect);
+
     const region = {
       left: Math.max(0, rect.left),
       top: Math.max(0, rect.top),
@@ -808,9 +838,12 @@
     try {
       captured = await chrome.runtime.sendMessage({ type: "captureRegion", region: region });
     } catch (error) {
+      hideCaptureToast();
       showError("The extension couldn't reach its background worker. Try reloading the page.");
       return;
     }
+
+    hideCaptureToast();
 
     if (!captured || !captured.ok) {
       showError((captured && captured.error) || "Couldn't photograph that ad.");

@@ -221,6 +221,108 @@ def test_image_with_no_text_is_a_422(client, blank_image_bytes):
     assert "No readable text" in response.get_json()["error"]
 
 
+def _fake_extraction(lines, confidence=0.9):
+    text = " ".join(lines)
+    return {
+        "text": text,
+        "raw_text": text,
+        "lines": list(lines),
+        "confidence": confidence,
+        "line_count": len(lines),
+        "backend": "fake",
+        "repaired": False,
+    }
+
+
+@pytest.mark.model
+@pytest.mark.slow
+def test_multi_frame_upload_merges_unique_lines(client, monkeypatch):
+    """Animated/video ads: the extension sends several frames of one slot.
+
+    A rotating creative shows different text per frame; a static one repeats
+    itself. Lines merge order-preserving and case-insensitively deduped, so
+    both end up with each message exactly once.
+    """
+    frames = iter(
+        [
+            _fake_extraction(["FINAL HOURS: 70% OFF", "Act now!"]),
+            _fake_extraction(["Act now!", "Only 7 bottles left"]),  # overlap
+            _fake_extraction(["FINAL HOURS: 70% OFF"]),             # repeat
+        ]
+    )
+    monkeypatch.setattr(server.ocr, "extract_text", lambda _b: next(frames))
+
+    response = client.post(
+        "/api/analyze",
+        data={
+            "image": [
+                (io.BytesIO(b"f1"), "f1.png"),
+                (io.BytesIO(b"f2"), "f2.png"),
+                (io.BytesIO(b"f3"), "f3.png"),
+            ]
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+
+    assert payload["text"] == "FINAL HOURS: 70% OFF Act now! Only 7 bottles left"
+
+    ocr_block = payload["source"]["ocr"]
+    assert ocr_block["frames"] == 3
+    assert ocr_block["readable_frames"] == 3
+    assert ocr_block["line_count"] == 3
+
+
+@pytest.mark.model
+@pytest.mark.slow
+def test_blank_frames_do_not_sink_a_burst(client, monkeypatch):
+    """A transition frame with no text must not break the whole capture."""
+    frames = iter(
+        [
+            _fake_extraction([]),  # caught mid-transition
+            _fake_extraction(["Guaranteed results, limited time only"]),
+        ]
+    )
+    monkeypatch.setattr(server.ocr, "extract_text", lambda _b: next(frames))
+
+    response = client.post(
+        "/api/analyze",
+        data={
+            "image": [
+                (io.BytesIO(b"f1"), "f1.png"),
+                (io.BytesIO(b"f2"), "f2.png"),
+            ]
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["source"]["ocr"]["readable_frames"] == 1
+    assert "Guaranteed results" in payload["text"]
+
+
+def test_all_blank_frames_are_a_422(client, monkeypatch):
+    monkeypatch.setattr(
+        server.ocr, "extract_text", lambda _b: _fake_extraction([])
+    )
+
+    response = client.post(
+        "/api/analyze",
+        data={
+            "image": [
+                (io.BytesIO(b"f1"), "f1.png"),
+                (io.BytesIO(b"f2"), "f2.png"),
+            ]
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 422
+
+
 def test_near_empty_ocr_is_a_422_not_a_verdict(client, monkeypatch):
     """A stray digit off an ad thumbnail must not become a confident verdict.
 
@@ -230,14 +332,7 @@ def test_near_empty_ocr_is_a_422_not_a_verdict(client, monkeypatch):
     monkeypatch.setattr(
         server.ocr,
         "extract_text",
-        lambda _bytes: {
-            "text": "1",
-            "raw_text": "1",
-            "confidence": 0.51,
-            "line_count": 1,
-            "backend": "fake",
-            "repaired": False,
-        },
+        lambda _bytes: _fake_extraction(["1"], confidence=0.51),
     )
 
     response = client.post(

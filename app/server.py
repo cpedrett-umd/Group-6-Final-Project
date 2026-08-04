@@ -140,19 +140,55 @@ def analyze():
 
     try:
         if "image" in request.files:
-            upload = request.files["image"]
-            image_bytes = upload.read()
+            # One file for a still ad; several for an animated or video ad,
+            # where the extension photographs the same slot a few times and
+            # each frame may carry different text. Lines are merged with
+            # order-preserving dedup, so a rotating creative contributes each
+            # message once and a static one is unchanged by extra frames.
+            uploads = request.files.getlist("image")
 
-            if not image_bytes:
-                return jsonify({"error": "The uploaded image was empty."}), 400
+            merged_lines = []
+            seen = set()
+            raw_parts = []
+            confidences = []
+            readable_frames = 0
 
-            extraction = ocr.extract_text(image_bytes)
-            text = extraction["text"]
+            for upload in uploads:
+                image_bytes = upload.read()
+
+                if not image_bytes:
+                    return jsonify({"error": "The uploaded image was empty."}), 400
+
+                extraction = ocr.extract_text(image_bytes)
+
+                if extraction["lines"]:
+                    readable_frames += 1
+                    confidences.append(extraction["confidence"])
+                    raw_parts.append(extraction["raw_text"])
+
+                for line in extraction["lines"]:
+                    key = " ".join(line.lower().split())
+                    if key and key not in seen:
+                        seen.add(key)
+                        merged_lines.append(line)
+
+            text = " ".join(merged_lines)
 
             source = {
                 "mode": "image",
-                "filename": upload.filename,
-                "ocr": extraction,
+                "filename": uploads[0].filename,
+                "ocr": {
+                    "text": text,
+                    "raw_text": " ".join(raw_parts),
+                    "confidence": round(
+                        sum(confidences) / len(confidences), 4
+                    ) if confidences else 0.0,
+                    "line_count": len(merged_lines),
+                    "backend": ocr.available_backend(),
+                    "repaired": text != " ".join(raw_parts),
+                    "frames": len(uploads),
+                    "readable_frames": readable_frames,
+                },
             }
 
             if len(text.strip()) < MIN_OCR_CHARS:

@@ -93,10 +93,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 let _lastCapture = null;
 
-async function captureRegion(tabId, region) {
-  const tab = await chrome.tabs.get(tabId);
+// Animated and video creatives rotate their text, so one frame can catch a
+// transition and miss the message entirely. Photograph the slot a few times
+// and let the server merge the unique lines. Static ads just contribute the
+// same lines each frame and dedupe back to one copy.
+const BURST_FRAMES = 3;
+const BURST_GAP_MS = 1200;
 
-  const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+async function captureOneFrame(windowId, region) {
+  const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
     format: "png",
   });
 
@@ -124,24 +129,43 @@ async function captureRegion(tabId, region) {
   const canvas = new OffscreenCanvas(width, height);
   canvas.getContext("2d").drawImage(bitmap, left, top, width, height, 0, 0, width, height);
 
-  const blob = await canvas.convertToBlob({ type: "image/png" });
+  return canvas.convertToBlob({ type: "image/png" });
+}
 
-  _lastCapture = { blob, tabId };
+async function captureRegion(tabId, region) {
+  const tab = await chrome.tabs.get(tabId);
 
-  return { ok: true, captured: true };
+  const frames = Math.max(1, region.frames || BURST_FRAMES);
+  const gap = region.gapMs === undefined ? BURST_GAP_MS : region.gapMs;
+
+  const blobs = [];
+
+  for (let index = 0; index < frames; index += 1) {
+    blobs.push(await captureOneFrame(tab.windowId, region));
+
+    if (index < frames - 1 && gap > 0) {
+      await new Promise((resolve) => setTimeout(resolve, gap));
+    }
+  }
+
+  _lastCapture = { blobs, tabId };
+
+  return { ok: true, captured: true, frames: blobs.length };
 }
 
 async function analyzeCapture(tabId) {
   if (!_lastCapture || _lastCapture.tabId !== tabId) {
-    // MV3 workers can be torn down between messages; the blob dies with them.
+    // MV3 workers can be torn down between messages; the blobs die with them.
     throw new Error("The capture expired. Right-click the ad and try again.");
   }
 
-  const { blob } = _lastCapture;
+  const { blobs } = _lastCapture;
   _lastCapture = null;
 
   const form = new FormData();
-  form.append("image", blob, "ad-capture.png");
+  blobs.forEach((blob, index) => {
+    form.append("image", blob, `ad-frame-${index + 1}.png`);
+  });
 
   const apiResponse = await fetch(`${await apiBase()}/api/analyze`, {
     method: "POST",
