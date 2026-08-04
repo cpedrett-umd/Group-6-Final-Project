@@ -65,11 +65,24 @@ python app/desktop.py
 python app/server.py --warm
 ```
 
-Then <http://127.0.0.1:5000>. `--warm` loads the model at startup instead of on
-the first click, so the first analysis in a live demo isn't slow.
+Then <http://127.0.0.1:5000>. Run it from the repository root. The server holds
+the terminal; `Ctrl+C` stops it.
+
+| Flag | Effect |
+|---|---|
+| `--warm` | Loads the model at startup (~10s) rather than on the first click |
+| `--port 8000` | Serve on a different port |
+| `--host 0.0.0.0` | Reachable from other machines on the network |
+
+`Address already in use` means something already holds that port — use it, pass
+`--port`, or stop it. On Windows: `netstat -ano | findstr :5000` then
+`taskkill /PID <pid> /F`. On macOS or Linux: `lsof -ti:5000 | xargs kill`.
+
+`desktop.py` never hits this — it binds to an OS-assigned free port.
 
 If the model or OCR is missing, the page still loads and shows a banner saying
-what to run — it won't fail silently mid-demo.
+what to run — it won't fail silently mid-demo. `curl http://127.0.0.1:5000/api/health`
+checks the same thing from a terminal.
 
 ### About the window size
 

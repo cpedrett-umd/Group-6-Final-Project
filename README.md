@@ -270,26 +270,72 @@ downloads ~15 MB of ONNX models.
 
 ### 3. Run
 
-**As a desktop app** — a compact window, no browser involved:
+Run every command below **from the repository root**.
+
+#### As a desktop app
 
 ```bash
 python app/desktop.py
 ```
 
-**As a local web app** — the same UI, and the backend the extension needs:
+Opens a native window — no browser, no URL. It picks its own free port, so it
+never collides with a server you already have running. Closing the window stops
+it.
+
+#### As a local web app
 
 ```bash
 python app/server.py --warm
 ```
 
-Then open <http://127.0.0.1:5000>. (`--warm` loads the model at startup so the
-first analysis isn't slow.)
+Prints `Running on http://127.0.0.1:5000` — open that in a browser. This is also
+the backend the extension talks to, so leave it running if you're using the
+extension.
 
-**As a browser extension** — with the server above running, open
-`chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the
-`extension/` folder. Then visit the built-in demo article:
+The server runs in the **foreground**: keep the terminal open, and press
+`Ctrl+C` to stop it.
 
-<http://127.0.0.1:5000/demo-page>
+| Flag | Effect |
+|---|---|
+| `--warm` | Loads the model at startup (~10s) instead of on the first click. Worth it before a live demo. |
+| `--port 8000` | Use a different port. |
+| `--host 0.0.0.0` | Accept connections from other machines on your network. |
+
+**"Address already in use"** means a server is already running on that port.
+Either use it, pick another with `--port`, or stop the old one:
+
+```bash
+# Windows — find the PID on port 5000, then kill it
+netstat -ano | findstr :5000
+taskkill /PID <pid> /F
+```
+
+```bash
+# macOS / Linux
+lsof -ti:5000 | xargs kill
+```
+
+#### As a browser extension
+
+Start the server above, then in Chrome or Edge open `chrome://extensions` →
+enable **Developer mode** → **Load unpacked** → select the `extension/` folder.
+
+Then visit the built-in demo article: <http://127.0.0.1:5000/demo-page>
+
+After editing any extension file, press the reload icon on its card in
+`chrome://extensions`, then refresh the page so the content script re-injects.
+
+#### Checking it's healthy
+
+```bash
+curl http://127.0.0.1:5000/api/health
+```
+
+`{"model_ready":true,"ocr_backend":"rapidocr"}` means everything is ready. If
+`model_ready` is `false`, run `git lfs pull`. If `ocr_backend` is `null`, image
+uploads won't work — reinstall with `pip install -r requirements.txt`. The page
+itself also shows a banner when either is missing, so nothing fails silently
+mid-demo.
 
 ### 4. Try it on the sample ads
 
