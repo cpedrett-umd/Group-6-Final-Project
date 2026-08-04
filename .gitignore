@@ -36,3 +36,4 @@ Thumbs.db
 # Model weights
 modeling/baseline_distilbert_model/
 *.safetensors
+modeling/hyperopt_results/best_distilbert_model/

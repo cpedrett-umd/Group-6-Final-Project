@@ -1,0 +1,4 @@
+batch_size: 16
+epochs: 3
+learning_rate: 5e-05
+weight_decay: 0.0
