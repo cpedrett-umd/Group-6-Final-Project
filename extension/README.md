@@ -6,23 +6,54 @@ panel is the same one the app shows.
 
 Chrome / Edge, Manifest V3. Unpacked — it is a course demo, not a store listing.
 
-## Load it
+## Install it
 
-1. Start the backend (the extension is a front end for the same API):
+Chrome or Edge. Loaded unpacked — this is a course project, not a store listing.
 
-   ```bash
-   python app/server.py
-   ```
+**1. Start the backend.** The extension is only a front end; the model runs in
+the server. It must stay running the whole time you use the extension.
 
-2. Open `chrome://extensions`, turn on **Developer mode**, click **Load
-   unpacked**, and choose this `extension/` folder.
+```bash
+python app/server.py --warm
+```
 
-3. Open the demo page the server hosts:
+Run that from the repository root and wait for
+`Running on http://127.0.0.1:5000`. Leave the terminal open.
 
-   <http://127.0.0.1:5000/demo-page>
+**2. Open the extensions page.** Type **`chrome://extensions`** into the address
+bar (`edge://extensions` on Edge). It's also under ⋮ → Extensions → Manage
+Extensions.
+
+**3. Turn on Developer mode** — the toggle at the top right. Without it, the
+*Load unpacked* button isn't shown.
+
+**4. Click Load unpacked** and select this **`extension/`** folder — the folder
+itself, not a file inside it. It's the one containing `manifest.json`. An
+*AdInsight* card should appear, version 0.1.0, with no errors.
+
+**5. Pin it.** Click the puzzle-piece icon in the toolbar and pin **AdInsight**.
+Easy to skip, but the popup holds *Pick an ad on this page*, the server status,
+and the API address setting.
+
+**6. Open the demo page:**
+
+<http://127.0.0.1:5000/demo-page>
 
 That page is an ordinary-looking news article with a sponsored block in it —
 a fixed target so a demo never depends on finding a live ad.
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| Popup says "Server not running" | The backend stopped. Restart `python app/server.py --warm`. |
+| Nothing happens when hovering an ad | That block isn't marked up as an ad. Use **Pick an ad on this page**. |
+| Panel never appears at all | Reload the page — content scripts only inject at page load. |
+| Changes to these files do nothing | Press the reload icon on the AdInsight card, **then** refresh the page. |
+| "Service worker (inactive)" | Normal. MV3 workers sleep and wake on demand. |
+| Errors button on the card | Click it for the service-worker console; most issues show there. |
+| Server is on another port | Set it in the popup under **Server address**. |
+| Ad is in an iframe | Cross-origin iframes are unreadable by any extension. Right-click the image, or use pick mode on nearby text. |
 
 ## Three ways to analyze an ad
 

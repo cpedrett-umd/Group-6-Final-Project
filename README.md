@@ -270,30 +270,39 @@ downloads ~15 MB of ONNX models.
 
 ### 3. Run
 
-Run every command below **from the repository root**.
+There are two surfaces, and they set up differently. **The app is standalone;
+the extension needs the server running behind it.** Pick one:
 
-#### As a desktop app
+- [**A — Run the app**](#a--run-the-app) — one command, nothing to install
+- [**B — Install the browser extension**](#b--install-the-browser-extension) — start the server, then load it in Chrome
+
+Run every command from the **repository root**.
+
+---
+
+## A — Run the app
+
+The quickest path. Nothing to install, no browser involved.
 
 ```bash
 python app/desktop.py
 ```
 
-Opens a native window — no browser, no URL. It picks its own free port, so it
-never collides with a server you already have running. Closing the window stops
-it.
+A native window opens. That's it — the model loads at startup (~10s), then
+you can paste ad text or upload a screenshot.
 
-#### As a local web app
+It binds to a port the OS picks, so it **never collides** with a server you
+already have running. Closing the window shuts it down.
+
+<details>
+<summary>Prefer it in a browser tab instead?</summary>
 
 ```bash
 python app/server.py --warm
 ```
 
-Prints `Running on http://127.0.0.1:5000` — open that in a browser. This is also
-the backend the extension talks to, so leave it running if you're using the
-extension.
-
-The server runs in the **foreground**: keep the terminal open, and press
-`Ctrl+C` to stop it.
+Prints `Running on http://127.0.0.1:5000` — open that. Same UI. The server runs
+in the **foreground**, so keep the terminal open; `Ctrl+C` stops it.
 
 | Flag | Effect |
 |---|---|
@@ -301,11 +310,99 @@ The server runs in the **foreground**: keep the terminal open, and press
 | `--port 8000` | Use a different port. |
 | `--host 0.0.0.0` | Accept connections from other machines on your network. |
 
-**"Address already in use"** means a server is already running on that port.
-Either use it, pick another with `--port`, or stop the old one:
+</details>
+
+---
+
+## B — Install the browser extension
+
+Chrome or Edge. It's loaded unpacked — this is a course project, not a store
+listing.
+
+#### Step 1 — Start the server
+
+The extension is only a front end; the model runs here. **It must stay running
+the whole time you use the extension.**
 
 ```bash
-# Windows — find the PID on port 5000, then kill it
+python app/server.py --warm
+```
+
+Wait for `Running on http://127.0.0.1:5000`, and leave that terminal open.
+
+#### Step 2 — Open the extensions page
+
+Go to **`chrome://extensions`** (or `edge://extensions` on Edge). Typing it into
+the address bar is the reliable way — it's also under ⋮ → Extensions → Manage
+Extensions.
+
+#### Step 3 — Turn on Developer mode
+
+Toggle **Developer mode**, top-right of that page. Without it, the *Load
+unpacked* button doesn't appear.
+
+#### Step 4 — Load unpacked
+
+Click **Load unpacked**, then select the **`extension/`** folder inside this
+repository — the folder itself, not any file inside it. It's the one containing
+`manifest.json`.
+
+An *AdInsight* card should appear. Version 0.1.0, no errors.
+
+#### Step 5 — Pin it to the toolbar
+
+Click the puzzle-piece icon in Chrome's toolbar, find **AdInsight**, and click
+the pin. Easy to skip, but the popup is where *Pick an ad on this page* and the
+server status live.
+
+#### Step 6 — Try it
+
+Open the demo article the server hosts:
+
+**<http://127.0.0.1:5000/demo-page>**
+
+Then use any of these:
+
+| Action | What happens |
+|---|---|
+| **Hover** the sponsored NeuroVital block | An *Analyze this ad* button appears — click it |
+| **Select** any paragraph | Same button, labeled *Analyze this text* |
+| Toolbar icon → **Pick an ad on this page** | Hover anything, click to analyze. Works on sites the auto-detector misses |
+| **Right-click** an image → *Analyze this ad image* | Runs OCR, then the model |
+
+Then try a real news site. Note that ads inside **cross-origin iframes** —
+most programmatic ad slots — can't be read by any extension; use pick mode on
+the surrounding text, or right-click the image.
+
+#### If something's off
+
+| Symptom | Fix |
+|---|---|
+| Popup says "Server not running" | Step 1's terminal has stopped. Restart it. |
+| Nothing happens on hover | The block isn't marked up as an ad. Use **Pick an ad on this page**. |
+| Panel never appears | Reload the page. Content scripts only inject on page load. |
+| You edited an extension file | Press the reload icon on the AdInsight card, *then* refresh the page. |
+| "Service worker (inactive)" | Normal — MV3 workers sleep and wake on demand. |
+| Server on a different port | Set it in the popup under **Server address**. |
+
+---
+
+### Checking it's healthy
+
+```bash
+curl http://127.0.0.1:5000/api/health
+```
+
+`{"model_ready":true,"ocr_backend":"rapidocr"}` means everything is ready.
+`model_ready: false` → run `git lfs pull`. `ocr_backend: null` → image uploads
+won't work, reinstall with `pip install -r requirements.txt`. Both surfaces also
+show a banner when either is missing, so nothing fails silently mid-demo.
+
+**"Address already in use"** means a server already holds that port. Use it,
+pass `--port`, or stop the old one:
+
+```bash
+# Windows
 netstat -ano | findstr :5000
 taskkill /PID <pid> /F
 ```
@@ -314,28 +411,6 @@ taskkill /PID <pid> /F
 # macOS / Linux
 lsof -ti:5000 | xargs kill
 ```
-
-#### As a browser extension
-
-Start the server above, then in Chrome or Edge open `chrome://extensions` →
-enable **Developer mode** → **Load unpacked** → select the `extension/` folder.
-
-Then visit the built-in demo article: <http://127.0.0.1:5000/demo-page>
-
-After editing any extension file, press the reload icon on its card in
-`chrome://extensions`, then refresh the page so the content script re-injects.
-
-#### Checking it's healthy
-
-```bash
-curl http://127.0.0.1:5000/api/health
-```
-
-`{"model_ready":true,"ocr_backend":"rapidocr"}` means everything is ready. If
-`model_ready` is `false`, run `git lfs pull`. If `ocr_backend` is `null`, image
-uploads won't work — reinstall with `pip install -r requirements.txt`. The page
-itself also shows a banner when either is missing, so nothing fails silently
-mid-demo.
 
 ### 4. Try it on the sample ads
 
