@@ -4,7 +4,7 @@
 
 An NLP system for detecting emotionally manipulative advertising tactics.
 
-[Report](#) | [Demo](#) |
+[Report](#) | [Demo](app/README.md) |
 
 **Group 6 — Final Project**
 [Shashank Ashoka](https://github.com/shashk09-coder), [Christopher Pedretti](https://github.com/cpedrett-umd), [Ciara Cameron](https://github.com/Ciaracam), [
@@ -114,12 +114,37 @@ effort was redirected to text and image. (Prior ASR work is retained under
 
 **North-star metric:** macro F1 across the 7 persuasion-tactic classes.
 
+### The tactic classifier
+
+DistilBERT fine-tuned on the 3,230 labeled ads, with the training configuration
+chosen by a Hyperopt TPE search (`modeling/train_hyperopt.py`). The winning
+configuration — lr 5e-5, batch 16, 3 epochs, weight decay 0.0 — scores on the
+held-out test split (15%, stratified):
+
+| Metric | Score |
+|---|---|
+| **Macro F1** (north star) | **0.896** |
+| Accuracy | 0.909 |
+| Weighted F1 | 0.911 |
+
+Per-class F1 ranges from 0.77 (Social Proof, the smallest class at 198 examples)
+to 0.98 (Fear Appeals). Class weighting in the loss compensates for the ~4.6x
+imbalance.
+
+The weights are committed via Git LFS as **float16** (134 MB rather than 268 MB).
+float16 changes none of the 485 held-out test predictions and leaves macro F1 at
+0.8956, so the extra precision would be pure clone cost; `app/predict.py` casts
+back to float32 at load. After retraining, run `python compress_model.py` before
+committing, or the repo gains a 268 MB file.
+
 ### Road to demo day
 
-1. Merge & annotate the multi-modal dataset
-2. Train & evaluate the tactic classifier (CLIP baseline)
-3. Build the explanation & review-insight layers
-4. Ship the app & browser-extension MVP
+1. ~~Merge & annotate the multi-modal dataset~~ — done
+2. ~~Train & evaluate the tactic classifier~~ — done, macro F1 0.896
+3. Build the explanation & review-insight layers — explanation layer done
+   (`app/tactics.py`); review-insight layer still stubbed
+4. ~~Ship the app & browser-extension MVP~~ — both surfaces working
+   (`app/`, `extension/`)
 5. Usability tests with adults 60+ → demo day
 
 ---
@@ -138,10 +163,34 @@ Group-6-Final-Project/
 │   │   ├── requirements.txt
 │   │   └── ads_dataset_*(deprecated).csv   # Earlier dataset iterations, kept for reference
 │   └── audio_processing (deprecated)/      # Prior ASR experiment (video ads)
-├── modeling/                               # Tokenizer for the base NLP model
+├── modeling/                               # Tokenizer + tactic classifier
 │   ├── hf_tokenizer.py                     # AdsTokenizer + dataset-tokenization script
+│   ├── train_baseline.py                   # Baseline DistilBERT fine-tune
+│   ├── train_hyperopt.py                   # Hyperopt (TPE) search over the training config
+│   ├── train_best.py                       # Trains just the winning config → saved weights
+│   ├── compress_model.py                   # Converts saved weights to fp16 before committing
+│   ├── hyperopt_results/                   # Trial table, best parameters, best model (LFS)
 │   ├── requirements.txt
 │   └── README.md                           # Tokenizer usage + artifact details
+├── app/                                    # App surface — the wireframe, working
+│   ├── server.py                           # Flask API + static serving
+│   ├── desktop.py                          # Same UI as a native desktop window
+│   ├── predict.py                          # Tuned model → label + confidence
+│   ├── ocr.py                              # Ad screenshot → text (RapidOCR)
+│   ├── tactics.py                          # Trigger-phrase lexicon + plain-language copy
+│   ├── reviews.py                          # Stub for the review-insight layer
+│   ├── static/                             # index.html, styles.css, app.js, demo-page.html
+│   ├── requirements.txt
+│   └── README.md                           # Setup, the three inputs, API shape
+├── extension/                              # Browser-extension surface (Chrome MV3)
+│   ├── manifest.json
+│   ├── background.js                       # Service worker — network + context menus
+│   ├── content.js                          # Overlay: ad detection, pick mode, rendering
+│   ├── panel.css                           # Overlay styles (shadow-root scoped)
+│   ├── popup.html / popup.js               # Toolbar popup
+│   ├── tests/                              # 57 tests (node:test + jsdom)
+│   └── README.md
+├── tests/                                  # 118 Python tests (pytest)
 ├── docs/                                   # Project docs and reference material
 │   ├── project_overview.pdf
 │   ├── labeling_guidelines.md
@@ -152,9 +201,10 @@ Group-6-Final-Project/
 ```
 
 The abstract above describes the full planned system (multimodal input, analysis
-model, review layer, app, and extension). The repository currently covers the
-**data and tokenization** groundwork — the labeled dataset, its cleaning
-scripts, and the HuggingFace subword tokenizer that feeds the downstream model.
+model, review layer, app, and extension). The repository now covers the data and
+tokenization groundwork, the **tuned tactic classifier**, and a **working demo
+front end** for both input modalities. The review-insight layer is the main piece
+still outstanding — `app/reviews.py` holds its stub.
 
 ---
 
@@ -173,6 +223,48 @@ pip install -r "datasets/text_processing/requirements.txt"
 
 See [modeling/README.md](modeling/README.md) for how to load the pre-tokenized
 dataset or regenerate the tokenizer artifacts.
+
+## Running the demo
+
+```bash
+pip install -r modeling/requirements.txt -r app/requirements.txt
+```
+
+The tuned weights are committed through **Git LFS**, so a clone comes with a
+working model — no training step. Make sure LFS is installed before cloning
+(`git lfs install`); if you cloned without it, run `git lfs pull`.
+
+**App** — a compact desktop window:
+
+```bash
+python app/desktop.py
+```
+
+**Browser extension** — start the backend, then load `extension/` unpacked via
+`chrome://extensions` → Developer mode → Load unpacked, and open
+<http://127.0.0.1:5000/demo-page>:
+
+```bash
+python app/server.py --warm
+```
+
+Both surfaces accept ad text or an ad screenshot; OCR reads the words off the
+image and feeds them to the classifier. See [app/README.md](app/README.md) and
+[extension/README.md](extension/README.md).
+
+## Tests
+
+```bash
+python -m pytest tests/ -q
+```
+
+```bash
+cd extension/tests && npm install && npm test
+```
+
+175 tests — 118 Python over the analysis pipeline and API, 57 JavaScript over
+the extension overlay. Tests that need the weights or an OCR backend skip
+rather than fail, so a fresh clone runs green.
 
 
 ## Team

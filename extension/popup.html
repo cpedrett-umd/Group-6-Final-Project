@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AdInsight</title>
+<style>
+  :root {
+    --ink: #12303c; --muted: #5f7883; --teal: #15708d; --teal-dark: #0e5670;
+    --line: #d8e4e8; --amber-bg: #fdf3e0; --amber-line: #f3dfb6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    width: 340px;
+    margin: 0;
+    padding: 16px;
+    background: #fff;
+    color: var(--ink);
+    font: 15px/1.5 "Segoe UI", -apple-system, Roboto, Arial, sans-serif;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+  .mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: var(--ink); color: #fff; }
+  .tagline { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
+
+  .status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; margin-bottom: 14px; }
+  .status.ok   { background: #eefaf4; color: #2c6b53; }
+  .status.bad  { background: var(--amber-bg); border: 1px solid var(--amber-line); color: #7c5310; }
+  .status code { background: rgba(0,0,0,.07); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .ok .dot { background: #2e8f68; } .bad .dot { background: #e2900f; }
+
+  label { display: block; font-weight: 700; margin-bottom: 7px; font-size: 14px; }
+  textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+    background: #fbfdfd; color: var(--ink); font: inherit; font-size: 14px; resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--teal); border-color: transparent; }
+
+  button.go {
+    width: 100%; margin-top: 10px; padding: 11px; border: 0; border-radius: 9px;
+    background: var(--teal); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  button.go:hover { background: var(--teal-dark); }
+  button.go:disabled { background: #9dbcc7; cursor: not-allowed; }
+  button.pick { margin-top: 0; background: var(--ink); }
+  button.pick:hover { background: #0b222b; }
+  .pick-note { margin: 6px 0 16px; color: var(--muted); font-size: 12.5px; text-align: center; }
+
+  .hint { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .hint strong { color: var(--ink); }
+
+  .server { margin-top: 12px; }
+  .server summary { color: var(--muted); font-size: 13px; cursor: pointer; }
+  .server input {
+    width: 100%; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 7px; font: inherit; font-size: 13px; color: var(--ink);
+  }
+  .saved { color: #2c6b53; font-size: 12.5px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <span class="mark">
+    <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+  </span>
+  <span>AdInsight</span>
+</div>
+<p class="tagline">Understand the persuasion behind every ad.</p>
+
+<div class="status" id="status"><span class="dot"></span><span id="status-text">Checking server…</span></div>
+
+<button class="go pick" id="pick" type="button">Pick an ad on this page</button>
+<p class="pick-note">Then hover any ad and click it.</p>
+
+<label for="text">Or paste ad text</label>
+<textarea id="text" rows="5" placeholder="Act now — only 3 bottles left. Doctor-recommended formula guaranteed to work in 7 days."></textarea>
+<button class="go" id="go" type="button">Analyze this ad</button>
+
+<p class="hint">
+  <strong>On any page:</strong> hover a sponsored block for the
+  <em>Analyze this ad</em> button, select ad text, or right-click an ad image
+  and choose <em>Analyze this ad image</em>.
+</p>
+
+<details class="server">
+  <summary>Server address</summary>
+  <input type="text" id="api" placeholder="http://127.0.0.1:5000">
+  <p class="saved" id="saved" hidden>Saved.</p>
+</details>
+
+<script src="popup.js"></script>
+</body>
+</html>

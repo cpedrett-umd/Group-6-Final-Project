@@ -1,0 +1,13 @@
+{
+  "name": "adinsight-extension-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unit tests for the AdInsight browser extension (node:test + jsdom).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}
