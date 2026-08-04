@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AdInsight — Persuasion-Aware Ad Explainer</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="stage-head">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    </span>
+    <span>AdInsight</span>
+  </div>
+  <p class="stage-note">Browser-extension surface · same panel in the app</p>
+</header>
+
+<div id="status-strip" class="status-strip" hidden></div>
+
+<nav class="modes" role="tablist" aria-label="Ad source">
+  <button class="mode is-active" role="tab" aria-selected="true" data-mode="demo">Demo ad</button>
+  <button class="mode" role="tab" aria-selected="false" data-mode="text">Paste ad text</button>
+  <button class="mode" role="tab" aria-selected="false" data-mode="image">Upload ad image</button>
+</nav>
+
+<main class="workspace">
+
+  <!-- ── Left: what the user is looking at ───────────────────────── -->
+  <section class="source-col">
+
+    <!-- Demo: the mock webpage from the wireframe -->
+    <div class="source-view is-active" data-view="demo">
+      <div class="browser">
+        <div class="browser-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="url">yourlocalnews.com/health-article</span>
+        </div>
+        <div class="browser-body">
+          <div class="skeleton skeleton-head"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton short"></div>
+          <div class="skeleton"></div>
+
+          <article class="ad-card">
+            <p class="ad-kicker">Sponsored</p>
+            <h2 class="ad-brand">NeuroVital Labs</h2>
+            <div class="ad-photo" aria-label="product photo placeholder">product photo</div>
+            <p class="ad-copy"><strong>FINAL HOURS:</strong> Doctor-recommended MemoryMax Pro
+              reverses memory loss in 14 days. Only 7 bottles left — 70% off before the
+              supplement ban.</p>
+            <button class="ad-cta" type="button" disabled>Shop Now</button>
+          </article>
+
+          <div class="skeleton"></div>
+          <div class="skeleton short"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+      <button class="analyze analyze-float" type="button" data-analyze="demo">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        Analyze this ad
+      </button>
+    </div>
+
+    <!-- Paste text -->
+    <div class="source-view" data-view="text">
+      <div class="input-card">
+        <label class="input-label" for="ad-text">Paste the ad's words here</label>
+        <textarea id="ad-text" rows="9" spellcheck="false"
+          placeholder="Act now — only 3 bottles left. Doctor-recommended formula guaranteed to work in 7 days."></textarea>
+        <div class="input-foot">
+          <button class="chip" type="button" data-example="Act now! Only 3 bottles left of our doctor-recommended formula. Guaranteed results in 7 days or your money back.">Try an example</button>
+          <button class="analyze" type="button" data-analyze="text">Analyze this ad</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload image -->
+    <div class="source-view" data-view="image">
+      <div class="input-card">
+        <label class="input-label" for="ad-image">Upload a screenshot of the ad</label>
+        <div class="drop" id="drop-zone" tabindex="0" role="button"
+             aria-label="Choose an image, or drop one here">
+          <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <p class="drop-main">Choose an image, or drop one here</p>
+          <p class="drop-sub">PNG or JPG · the words are read off the picture</p>
+          <input type="file" id="ad-image" accept="image/*" hidden>
+        </div>
+        <figure class="preview" id="preview" hidden>
+          <img id="preview-img" alt="Uploaded ad preview">
+          <figcaption id="preview-name"></figcaption>
+        </figure>
+        <div class="input-foot">
+          <span class="ocr-note" id="ocr-note"></span>
+          <button class="analyze" type="button" data-analyze="image" disabled>Analyze this ad</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── Right: the AdInsight panel ──────────────────────────────── -->
+  <aside class="panel" aria-live="polite">
+    <div class="panel-head">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </span>
+        <span>AdInsight</span>
+      </div>
+      <button class="panel-close" type="button" aria-label="Close panel" id="close-panel">&times;</button>
+    </div>
+
+    <div class="panel-body" id="panel-body">
+
+      <!-- Idle -->
+      <div class="panel-state is-active" data-state="idle">
+        <p class="idle-copy">Pick an ad on the left, then press <strong>Analyze this ad</strong>.</p>
+        <p class="idle-sub">You'll get a plain-language read on how the ad is trying to persuade you.</p>
+      </div>
+
+      <!-- Working -->
+      <div class="panel-state" data-state="busy">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="idle-copy" id="busy-copy">Reading the ad…</p>
+      </div>
+
+      <!-- Error -->
+      <div class="panel-state" data-state="error">
+        <div class="callout callout-error">
+          <p class="callout-head">Couldn't analyze that.</p>
+          <p class="callout-msg" id="error-msg"></p>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="panel-state" data-state="result">
+
+        <div class="callout" id="summary-callout">
+          <span class="callout-icon" aria-hidden="true">!</span>
+          <div>
+            <p class="callout-head" id="summary-headline"></p>
+            <p class="callout-msg" id="summary-msg"></p>
+          </div>
+        </div>
+
+        <section class="read-back" id="read-back" hidden>
+          <h3 class="section-title">What we read from your image</h3>
+          <p class="read-back-text" id="read-back-text"></p>
+          <p class="read-back-meta" id="read-back-meta"></p>
+        </section>
+
+        <section>
+          <h3 class="section-title">What this ad is doing</h3>
+          <ul class="tactics" id="tactic-list"></ul>
+        </section>
+
+        <section class="reviews-section">
+          <h3 class="section-title">
+            What real customers say
+            <span class="mock-badge" id="review-badge">sample data</span>
+          </h3>
+          <p class="mock-notice" id="review-notice"></p>
+          <ul class="reviews" id="review-list"></ul>
+        </section>
+
+        <details class="detail">
+          <summary>Read the full explanation</summary>
+          <div class="detail-body">
+            <p class="detail-line">
+              The model read this ad as <strong id="detail-label"></strong>
+              (<span id="detail-conf"></span> confident).
+            </p>
+            <p class="detail-note">
+              This is the tuned DistilBERT classifier trained on 3,230 labeled ads.
+              It picks one main tactic; the other rows above come from trigger phrases
+              found in the ad's own words, using the project's labeling guidelines.
+              The training data has no <em>neutral</em> label, so the model must always
+              name a tactic — when its score is low and no trigger phrase appears, that
+              guess is shown here rather than reported as a finding.
+            </p>
+            <table class="dist" id="dist-table">
+              <caption>How the model scored all seven tactics</caption>
+              <tbody></tbody>
+            </table>
+            <p class="disclaimer">
+              AdInsight explains persuasion. It does not judge whether a product or
+              seller is fraudulent.
+            </p>
+          </div>
+        </details>
+
+        <div class="panel-actions">
+          <button class="btn-primary" type="button" id="again">Analyze another ad</button>
+        </div>
+
+      </div>
+    </div>
+  </aside>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Demo front end. Install on top of ../modeling/requirements.txt, which
+# supplies torch + transformers for the classifier itself.
+
+flask>=3.0                  # API + static file serving
+
+# OCR — turns an uploaded ad screenshot into text at request time.
+# Pip-only (no system installer); downloads ~15MB of ONNX models on first run.
+rapidocr-onnxruntime>=1.3
+
+# Repairs OCR lines whose spaces collapsed ("70%offbeforethesupplementban").
+# Optional: ocr.py falls back to the unrepaired text if it isn't installed.
+wordninja>=2.0
