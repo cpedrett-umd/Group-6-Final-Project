@@ -13,7 +13,7 @@ import { readSource } from "./helpers.js";
  * It registers its listeners at load time, so they are captured here and then
  * invoked directly, the way Chrome would.
  */
-function loadWorker({ fetchImpl, storage = {}, tabs = [{ id: 7 }] } = {}) {
+function loadWorker({ fetchImpl, storage = {}, tabs = [{ id: 7 }], captureSize } = {}) {
   const calls = [];
   const menus = [];
   const messageListeners = [];
@@ -39,11 +39,40 @@ function loadWorker({ fetchImpl, storage = {}, tabs = [{ id: 7 }] } = {}) {
     },
     tabs: {
       query: async () => tabs,
+      get: async (id) => ({ id, windowId: 1 }),
       sendMessage: (tabId, message) => tabMessages.push({ tabId, message }),
+      captureVisibleTab: async () => "data:image/png;base64,FAKE",
+    },
+  };
+
+  // The capture path uses browser drawing APIs Node doesn't have. The fakes
+  // reproduce only the geometry the crop logic depends on.
+  const bitmap = captureSize || { width: 1280, height: 800 };
+  const drawCalls = [];
+
+  const sandboxExtras = {
+    createImageBitmap: async () => bitmap,
+    OffscreenCanvas: class {
+      constructor(width, height) {
+        this.width = width;
+        this.height = height;
+      }
+      getContext() {
+        return { drawImage: (...args) => drawCalls.push(args) };
+      }
+      async convertToBlob() {
+        return new Blob(["cropped"], { type: "image/png" });
+      }
     },
   };
 
   const fetchStub = async (url, options) => {
+    // The worker re-fetches the capture's data URL to get a blob; that's
+    // plumbing, not an API call worth asserting on.
+    if (typeof url === "string" && url.startsWith("data:")) {
+      return { ok: true, blob: async () => new Blob(["png"], { type: "image/png" }) };
+    }
+
     calls.push({ url, options });
     return fetchImpl
       ? fetchImpl(url, options)
@@ -58,6 +87,7 @@ function loadWorker({ fetchImpl, storage = {}, tabs = [{ id: 7 }] } = {}) {
     console,
     setTimeout,
     URL,
+    ...sandboxExtras,
   };
 
   vm.createContext(sandbox);
@@ -66,12 +96,12 @@ function loadWorker({ fetchImpl, storage = {}, tabs = [{ id: 7 }] } = {}) {
   installListeners.forEach((fn) => fn());
 
   /** Invoke the onMessage listener and resolve what it sends back. */
-  const send = (message) =>
+  const send = (message, sender = {}) =>
     new Promise((resolve) => {
-      messageListeners[0](message, {}, resolve);
+      messageListeners[0](message, sender, resolve);
     });
 
-  return { calls, menus, menuClickListeners, tabMessages, send, storage };
+  return { calls, menus, menuClickListeners, tabMessages, send, storage, drawCalls };
 }
 
 function jsonResponse(body, ok = true) {
@@ -259,6 +289,101 @@ describe("popup routing", () => {
     const result = await worker.send({ type: "startPicking" });
 
     assert.equal(result.ok, false);
+  });
+});
+
+describe("region capture (video / iframe ads)", () => {
+  const SENDER = { tab: { id: 7 } };
+  const REGION = { left: 100, top: 200, width: 600, height: 300, devicePixelRatio: 2 };
+
+  it("registers the screenshot context-menu item on every context", () => {
+    const { menus } = loadWorker();
+    const capture = menus.find((menu) => menu.id === "adinsight-capture-region");
+
+    assert.ok(capture, "capture menu item missing");
+    // Spread: the array was built in the worker's vm realm, whose Array
+    // prototype differs from the test's, and deepStrictEqual checks prototypes.
+    assert.deepEqual([...capture.contexts], ["all"]);
+  });
+
+  it("forwards the menu click to the content script", () => {
+    const { menuClickListeners, tabMessages } = loadWorker();
+
+    menuClickListeners[0]({ menuItemId: "adinsight-capture-region" }, { id: 7 });
+
+    assert.equal(tabMessages[0].message.type, "captureRequested");
+  });
+
+  it("crops in device pixels using the reported DPR", async () => {
+    const worker = loadWorker({ captureSize: { width: 2560, height: 1600 } });
+
+    const captured = await worker.send({ type: "captureRegion", region: REGION }, SENDER);
+
+    assert.equal(captured.ok, true);
+
+    // drawImage(bitmap, sx, sy, sw, sh, ...) — region * DPR 2.
+    const [, sx, sy, sw, sh] = worker.drawCalls[0];
+    assert.deepEqual([sx, sy, sw, sh], [200, 400, 1200, 600]);
+  });
+
+  it("clamps a region hanging off the bitmap", async () => {
+    // Bitmap is 1000px wide; the region at DPR 2 would need 1400.
+    const worker = loadWorker({ captureSize: { width: 1000, height: 1600 } });
+
+    const captured = await worker.send(
+      { type: "captureRegion", region: { left: 100, top: 0, width: 600, height: 300, devicePixelRatio: 2 } },
+      SENDER
+    );
+
+    assert.equal(captured.ok, true);
+    const [, sx, , sw] = worker.drawCalls[0];
+    assert.equal(sx, 200);
+    assert.equal(sw, 800); // 1000 - 200, not 1200
+  });
+
+  it("refuses a region too small to read", async () => {
+    const worker = loadWorker();
+
+    const captured = await worker.send(
+      { type: "captureRegion", region: { left: 0, top: 0, width: 10, height: 10, devicePixelRatio: 1 } },
+      SENDER
+    );
+
+    assert.equal(captured.ok, false);
+    assert.match(captured.error, /too small/);
+  });
+
+  it("phase 2 posts the cropped blob to the analyze endpoint", async () => {
+    const worker = loadWorker({
+      fetchImpl: () => jsonResponse({ source: { mode: "image" } }),
+    });
+
+    await worker.send({ type: "captureRegion", region: REGION }, SENDER);
+    const result = await worker.send({ type: "analyzeCapture" }, SENDER);
+
+    assert.equal(result.ok, true);
+    assert.equal(worker.calls[0].url, "http://127.0.0.1:5000/api/analyze");
+    assert.ok(worker.calls[0].options.body instanceof FormData);
+    assert.ok(worker.calls[0].options.body.get("image"));
+  });
+
+  it("phase 2 without a capture reports expiry, not a crash", async () => {
+    const worker = loadWorker();
+
+    const result = await worker.send({ type: "analyzeCapture" }, SENDER);
+
+    assert.equal(result.ok, false);
+    assert.match(result.error, /expired/);
+  });
+
+  it("a capture from one tab cannot be analyzed from another", async () => {
+    const worker = loadWorker();
+
+    await worker.send({ type: "captureRegion", region: REGION }, SENDER);
+    const result = await worker.send({ type: "analyzeCapture" }, { tab: { id: 99 } });
+
+    assert.equal(result.ok, false);
+    assert.match(result.error, /expired/);
   });
 });
 

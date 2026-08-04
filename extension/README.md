@@ -59,16 +59,25 @@ a fixed target so a demo never depends on finding a live ad.
 
 | Action | What happens |
 |---|---|
-| **Hover a sponsored block** | An *Analyze this ad* button floats over it — the wireframe's interaction |
+| **Hover any ad** | An *Analyze this ad* button appears along the ad's bottom edge — text ads are read directly; iframe and video ads are **screenshotted** and OCR'd |
 | **Toolbar → Pick an ad on this page** | Hover *anything*; it outlines under the cursor, click to analyze |
 | **Select any text** | The same button appears over the selection |
-| **Right-click an ad image** | Context menu → *Analyze this ad image* → OCR, then the model |
+| **Right-click an ad** | *Analyze this ad by screenshot* — works on video and iframe ads |
+| **Right-click an ad image** | *Analyze this ad image* → downloads the image, OCR, then the model |
 | **Toolbar icon** | Popup with a paste box, server status, and the API address |
 
-Hovering works automatically only on blocks whose markup says "ad". **Pick
-mode** is the guaranteed path on sites that mark things up differently — it
-outlines whatever is under the cursor and analyzes it on click, and it
-suppresses the click so picking an ad never follows the ad's link. `Esc`
+**How hover decides.** A block whose markup says "ad" and which has readable
+text is analyzed as text. An ad **iframe** (DoubleClick, safeframe, Amazon,
+Criteo, Taboola…), a **video**, or an ad container whose words live inside a
+cross-origin iframe can't be read at all — for those, clicking the button
+**screenshots the tab and crops to the ad**, then OCRs the crop. A playing
+video contributes whatever frame is showing. The button sits *inside* the ad's
+bottom edge, so moving to click it never crosses other page elements that
+would steal the hover.
+
+**Pick mode** is the fallback for sponsored content whose markup doesn't say
+"ad" — it outlines whatever is under the cursor and analyzes it on click,
+suppressing the click so picking an ad never follows the ad's link. `Esc`
 cancels.
 
 Results render in a panel that slides in from the right. Press `Esc` or the
@@ -122,9 +131,14 @@ ships no dependencies.
 
 ## Known limits
 
-- **Ads inside cross-origin iframes can't be read.** Most programmatic ad slots
-  are third-party iframes, and a content script cannot reach into them. Those
-  need the right-click-the-image path, or a screenshot through the app.
+- **Cross-origin iframe ads can't be read as text — but they can be
+  screenshotted.** A content script cannot reach into a third-party iframe, so
+  those ads go through the capture path: the service worker photographs the
+  visible tab (`chrome.tabs.captureVisibleTab`), crops to the ad's on-screen
+  box, and OCRs the crop. This is also why the whole ad block captures better
+  than right-clicking its thumbnail image alone — live-tested on Taboola
+  creatives, the thumbnail often carries no words while the block's headline
+  carries them all.
 - Reload from `chrome://extensions` after editing any file here, then reload
   the page so the content script re-injects.
 

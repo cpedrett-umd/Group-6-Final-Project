@@ -25,6 +25,12 @@ import tactics
 # Guard against a browser tab uploading something enormous.
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 
+# OCR that recovers less than this is noise, not an ad. Live ad thumbnails
+# routinely yield a stray digit or logo fragment ("1", "TM"); classifying that
+# produces a confident-looking verdict about nothing. Below this, the image
+# path reports "no text" instead.
+MIN_OCR_CHARS = 8
+
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
@@ -137,11 +143,11 @@ def analyze():
                 "ocr": extraction,
             }
 
-            if not text.strip():
+            if len(text.strip()) < MIN_OCR_CHARS:
                 return (
                     jsonify(
                         {
-                            "error": "No text could be read from that image. "
+                            "error": "No readable text could be found in that image. "
                             "Try a sharper screenshot, or paste the ad's text instead.",
                             "source": source,
                         }

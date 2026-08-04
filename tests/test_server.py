@@ -218,7 +218,36 @@ def test_image_with_no_text_is_a_422(client, blank_image_bytes):
     )
 
     assert response.status_code == 422
-    assert "No text" in response.get_json()["error"]
+    assert "No readable text" in response.get_json()["error"]
+
+
+def test_near_empty_ocr_is_a_422_not_a_verdict(client, monkeypatch):
+    """A stray digit off an ad thumbnail must not become a confident verdict.
+
+    Found on live Taboola creatives: OCR read a lone "1" and the model then
+    classified one character. Anything under MIN_OCR_CHARS reports no text.
+    """
+    monkeypatch.setattr(
+        server.ocr,
+        "extract_text",
+        lambda _bytes: {
+            "text": "1",
+            "raw_text": "1",
+            "confidence": 0.51,
+            "line_count": 1,
+            "backend": "fake",
+            "repaired": False,
+        },
+    )
+
+    response = client.post(
+        "/api/analyze",
+        data={"image": (io.BytesIO(b"\x89PNG fake"), "thumb.png")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 422
+    assert "No readable text" in response.get_json()["error"]
 
 
 def test_empty_upload_is_rejected(client):

@@ -129,24 +129,28 @@ describe("ad detection", () => {
 });
 
 describe("pill placement", () => {
-  it("sits below the ad when there is room", async () => {
+  it("sits inside the ad along its bottom edge", async () => {
+    // Overlapping the ad means the pointer never leaves the ad's box on the
+    // way to the button, so nothing beside the ad can steal the hover.
     const env = createEnvironment();
     const { ad, pill } = layOutAd(env, { left: 100, top: 100, width: 400, height: 200 });
 
     mouse(env.window, ad, "mouseover");
     await tick(env.window);
 
-    assert.equal(pill.style.top, "308px"); // 100 + 200 + 8
+    assert.equal(pill.style.top, "246px"); // (100 + 200) - 44 - 10, inside
   });
 
-  it("flips above when the ad reaches the bottom of the viewport", async () => {
+  it("stays inside even at the detector's minimum ad height", async () => {
+    // The 80px size floor guarantees a 44px pill always fits inside, so the
+    // below/above fallbacks only matter for degenerate rects.
     const env = createEnvironment();
-    const { ad, pill } = layOutAd(env, { left: 100, top: 300, width: 400, height: 490 });
+    const { ad, pill } = layOutAd(env, { left: 100, top: 100, width: 400, height: 82 });
 
     mouse(env.window, ad, "mouseover");
     await tick(env.window);
 
-    assert.equal(pill.style.top, "248px"); // 300 - 44 - 8
+    assert.equal(pill.style.top, "128px"); // (100 + 82) - 44 - 10, inside
   });
 
   it("never positions the pill outside the viewport", async () => {
@@ -524,6 +528,186 @@ describe("dismissing the panel", () => {
     await tick(env.window, 260);
 
     assert.equal(env.shadow.querySelector(".ai-panel").hidden, true);
+  });
+});
+
+describe("screenshot capture (video / iframe ads)", () => {
+  function addAdIframe(env) {
+    const iframe = env.document.createElement("iframe");
+    iframe.src = "https://safeframe.googlesyndication.com/x";
+    env.document.body.append(iframe);
+    setRect(iframe, { left: 150, top: 120, width: 970, height: 250 });
+    return iframe;
+  }
+
+  function captureEnvironment(responses = {}) {
+    return createEnvironment({
+      respond: (message) => {
+        if (message.type === "captureRegion") {
+          return responses.capture || { ok: true, captured: true };
+        }
+        if (message.type === "analyzeCapture") {
+          return responses.analyze || {
+            ok: true,
+            data: analysisFixture({
+              source: { mode: "image", ocr: { confidence: 0.95, line_count: 2, repaired: false } },
+            }),
+          };
+        }
+        return { ok: true, data: analysisFixture() };
+      },
+    });
+  }
+
+  it("offers the pill when hovering an ad iframe, and clicking it captures", async () => {
+    const env = captureEnvironment();
+    const iframe = addAdIframe(env);
+    const pill = env.shadow.querySelector(".ai-pill");
+    Object.defineProperty(pill, "offsetWidth", { value: 190, configurable: true });
+    Object.defineProperty(pill, "offsetHeight", { value: 44, configurable: true });
+
+    // Entering a cross-origin iframe still fires mouseover on the iframe
+    // element itself in the parent page — the one event we get, and enough.
+    mouse(env.window, iframe, "mouseover");
+    await tick(env.window);
+
+    assert.equal(pill.hidden, false, "no pill on ad-iframe hover");
+    // Inside the ad, bottom edge: (120 + 250) - 44 - 10.
+    assert.equal(pill.style.top, "316px");
+
+    pill.click();
+    await tick(env.window, 150);
+
+    const capture = env.sent.find((m) => m.type === "captureRegion");
+    assert.ok(capture, "pill click did not start a capture");
+    assert.equal(capture.region.width, 970);
+    assert.equal(
+      env.shadow.querySelector(".ai-state.is-active").dataset.state,
+      "result"
+    );
+  });
+
+  it("offers capture for a text-less ad container wrapping an iframe", async () => {
+    // Yahoo's shape: the wrapper matches the ad selectors but holds no
+    // readable text — the words are inside a cross-origin iframe.
+    const env = captureEnvironment();
+    const wrapper = env.document.createElement("div");
+    wrapper.className = "ad-slot";
+    const inner = env.document.createElement("iframe");
+    inner.src = "https://safeframe.googlesyndication.com/y";
+    wrapper.append(inner);
+    env.document.body.append(wrapper);
+    setRect(wrapper, { left: 60, top: 100, width: 300, height: 250 });
+
+    const pill = env.shadow.querySelector(".ai-pill");
+    mouse(env.window, wrapper, "mouseover");
+    await tick(env.window);
+
+    assert.equal(pill.hidden, false, "no pill on text-less ad container");
+
+    pill.click();
+    await tick(env.window, 150);
+    assert.ok(env.sent.some((m) => m.type === "captureRegion"));
+  });
+
+  it("captures the iframe's rect when the right-click landed on it", async () => {
+    const env = captureEnvironment();
+    const iframe = addAdIframe(env);
+
+    mouse(env.window, iframe, "contextmenu", { clientX: 400, clientY: 200 });
+    env.dispatchRuntimeMessage({ type: "captureRequested" });
+    await tick(env.window, 120);
+
+    const capture = env.sent.find((m) => m.type === "captureRegion");
+    assert.ok(capture, "no captureRegion message sent");
+    assert.equal(capture.region.left, 150);
+    assert.equal(capture.region.top, 120);
+    assert.equal(capture.region.width, 970);
+    assert.equal(capture.region.height, 250);
+    assert.equal(typeof capture.region.devicePixelRatio, "number");
+  });
+
+  it("runs phase 2 and renders the result", async () => {
+    const env = captureEnvironment();
+    const iframe = addAdIframe(env);
+
+    mouse(env.window, iframe, "contextmenu", { clientX: 400, clientY: 200 });
+    env.dispatchRuntimeMessage({ type: "captureRequested" });
+    await tick(env.window, 150);
+
+    assert.ok(env.sent.some((m) => m.type === "analyzeCapture"));
+    assert.equal(
+      env.shadow.querySelector(".ai-state.is-active").dataset.state,
+      "result"
+    );
+    // Image input, so the read-back section is shown.
+    assert.equal(
+      env.shadow.querySelector('[data-state="result"] .ai-readback').hidden,
+      false
+    );
+  });
+
+  it("keeps our UI hidden through the screenshot phase", async () => {
+    let panelVisibleAtCapture = null;
+
+    const env = createEnvironment({
+      respond: (message) => {
+        if (message.type === "captureRegion") {
+          const panel = env.shadow.querySelector(".ai-panel");
+          panelVisibleAtCapture = !panel.hidden;
+          return { ok: true, captured: true };
+        }
+        return { ok: true, data: analysisFixture() };
+      },
+    });
+
+    const iframe = addAdIframe(env);
+    mouse(env.window, iframe, "contextmenu", { clientX: 400, clientY: 200 });
+    env.dispatchRuntimeMessage({ type: "captureRequested" });
+    await tick(env.window, 150);
+
+    assert.equal(panelVisibleAtCapture, false, "panel was up during the screenshot");
+  });
+
+  it("surfaces a phase-1 failure as an error state", async () => {
+    const env = captureEnvironment({
+      capture: { ok: false, error: "That region is too small to read." },
+    });
+
+    const iframe = addAdIframe(env);
+    mouse(env.window, iframe, "contextmenu", { clientX: 400, clientY: 200 });
+    env.dispatchRuntimeMessage({ type: "captureRequested" });
+    await tick(env.window, 120);
+
+    assert.equal(
+      env.shadow.querySelector(".ai-state.is-active").dataset.state,
+      "error"
+    );
+    assert.match(
+      env.shadow.querySelector('[data-state="error"] .ai-callout-msg').textContent,
+      /too small/
+    );
+    assert.ok(!env.sent.some((m) => m.type === "analyzeCapture"), "phase 2 ran anyway");
+  });
+
+  it("asks for a better click when nothing sizeable was under it", async () => {
+    const env = captureEnvironment();
+
+    // Right-click a tiny element with no sizeable ancestor rects (jsdom rects
+    // default to 0x0), so no capture target can be found.
+    const speck = env.document.createElement("span");
+    speck.textContent = "x";
+    env.document.body.append(speck);
+
+    mouse(env.window, speck, "contextmenu", { clientX: 5, clientY: 5 });
+    env.dispatchRuntimeMessage({ type: "captureRequested" });
+    await tick(env.window, 120);
+
+    assert.equal(
+      env.shadow.querySelector(".ai-state.is-active").dataset.state,
+      "error"
+    );
+    assert.equal(env.sent.length, 0, "sent a capture with no region");
   });
 });
 

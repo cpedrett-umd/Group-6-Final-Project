@@ -220,17 +220,24 @@
     const maxLeft = window.innerWidth - width - 8;
     const maxTop = window.innerHeight - height - 8;
 
-    let top = rect.bottom + 8;
+    // Sit INSIDE the ad, along its bottom edge. Overlapping the ad means the
+    // pointer never has to leave the ad's box to reach the button, so the
+    // hover can't be stolen by whatever sits next to the ad on the page. Only
+    // an ad too short to contain the pill gets it placed just below instead.
+    let top;
 
-    // Prefer below the target; flip above when there's no room.
-    if (top > maxTop) {
+    if (rect.height >= height + 20) {
+      top = rect.bottom - height - 10;
+    } else if (rect.bottom + 8 <= maxTop) {
+      top = rect.bottom + 8;
+    } else {
       top = rect.top - height - 8;
     }
 
     const left = Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, maxLeft));
 
-    // Whichever side was chosen, the pill must end up inside the viewport --
-    // a tall ad can leave neither edge with room.
+    // Whichever spot was chosen, the pill must end up inside the viewport --
+    // a tall ad half off screen can leave no edge with room.
     pill.style.left = `${left}px`;
     pill.style.top = `${Math.max(8, Math.min(top, maxTop))}px`;
   }
@@ -253,23 +260,78 @@
   pill.addEventListener("mouseleave", scheduleHide);
 
   pill.addEventListener("click", () => {
-    if (pillPayload) analyze(pillPayload);
+    const payload = pillPayload;
     hidePill();
+
+    if (!payload) return;
+
+    if (payload.captureElement) {
+      // Unreadable ad (iframe / video): screenshot it. Measure at click time,
+      // not hover time -- the page may have scrolled in between.
+      runCapture(payload.captureElement.getBoundingClientRect());
+    } else {
+      analyze(payload);
+    }
   });
 
   /* ── Trigger 1: hovering something that looks like an ad ────── */
 
-  function isPlausibleAd(element) {
-    const rect = element.getBoundingClientRect();
+  // Iframes serving from these hosts are display ads; their contents are
+  // unreadable (cross-origin), but their on-screen box is capturable.
+  const AD_FRAME_PATTERN =
+    /doubleclick|googlesyndication|safeframe|adsystem|amazon-adsystem|criteo|taboola|outbrain|adnxs|yieldmo|rubiconproject/i;
 
+  function isSensibleSlotSize(rect) {
     // Big enough to be a real slot, small enough not to be the whole page.
     if (rect.width < 120 || rect.height < 80) return false;
     if (rect.width > window.innerWidth * 0.95 && rect.height > window.innerHeight * 0.9) {
       return false;
     }
+    return true;
+  }
+
+  function isPlausibleAd(element) {
+    if (!isSensibleSlotSize(element.getBoundingClientRect())) return false;
 
     // Needs enough words for the classifier to have anything to read.
     return (element.innerText || "").trim().length >= 40;
+  }
+
+  function isAdFrame(element) {
+    if (!element || element.tagName !== "IFRAME") return false;
+    const identity = (element.src || "") + (element.id || "") + (element.name || "");
+    return AD_FRAME_PATTERN.test(identity);
+  }
+
+  /** The capturable ad element for a hover target, or null. */
+  function captureCandidate(target) {
+    // Hovering the ad iframe itself: the parent page gets a mouseover on the
+    // iframe *element* when the pointer enters its box (events inside it stay
+    // inside it, but entry is observable — enough to offer the pill).
+    if (isAdFrame(target) && isSensibleSlotSize(target.getBoundingClientRect())) {
+      return target;
+    }
+
+    if (target.tagName === "VIDEO" && isSensibleSlotSize(target.getBoundingClientRect())) {
+      return target;
+    }
+
+    // Hovering an ad-marked container that has no readable text (Yahoo's
+    // pattern: the wrapper matches, the words live in a cross-origin iframe
+    // inside it). Capturable if it holds an ad iframe or video.
+    let container = null;
+    try {
+      container = target.closest && target.closest(AD_SELECTOR);
+    } catch (error) {
+      return null;
+    }
+
+    if (container && isSensibleSlotSize(container.getBoundingClientRect())) {
+      const inner = container.querySelector("iframe, video");
+      if (inner) return container;
+    }
+
+    return null;
   }
 
   document.addEventListener(
@@ -279,6 +341,7 @@
       if (!target || typeof target.closest !== "function") return;
       if (host.contains(target)) return;
 
+      // Readable ads first: text is cheaper and more reliable than OCR.
       let candidate = null;
       try {
         candidate = target.closest(AD_SELECTOR);
@@ -286,12 +349,22 @@
         return; // Malformed selector support varies; fail quiet.
       }
 
-      if (!candidate || !isPlausibleAd(candidate)) return;
+      if (candidate && isPlausibleAd(candidate)) {
+        cancelHide();
+        showPill(candidate.getBoundingClientRect(), {
+          text: candidate.innerText.trim(),
+        });
+        return;
+      }
 
-      cancelHide();
-      showPill(candidate.getBoundingClientRect(), {
-        text: candidate.innerText.trim(),
-      });
+      // Unreadable ads (iframe / video / text-less ad container): same pill,
+      // but clicking it takes the screenshot path.
+      const capturable = captureCandidate(target);
+
+      if (capturable) {
+        cancelHide();
+        showPill(capturable.getBoundingClientRect(), { captureElement: capturable });
+      }
     },
     true
   );
@@ -432,13 +505,156 @@
     if (event.key === "Escape" && picking) stopPicking();
   });
 
-  /* ── Trigger 4: the context menu / popup (from background.js) ─ */
+  /* ── Trigger 4: screenshot capture (video / iframe ads) ─────── */
+
+  /* Display ads usually live in cross-origin iframes, and video ads have no
+   * text to read even when they don't -- a content script can see neither.
+   * But it *can* see where they are on screen. On right-click we remember the
+   * spot; when the user picks "Analyze this ad by screenshot", the worker
+   * photographs the tab and crops to the block under that spot. A playing
+   * video contributes its current frame, which is what the user was looking
+   * at when they right-clicked. */
+
+  let lastContextClick = null;
+
+  document.addEventListener(
+    "contextmenu",
+    (event) => {
+      lastContextClick = {
+        x: event.clientX,
+        y: event.clientY,
+        target: event.target,
+      };
+    },
+    true
+  );
+
+  function captureTargetRect() {
+    if (!lastContextClick) return null;
+
+    const { x, y, target } = lastContextClick;
+
+    // Prefer the iframe or video whose box contains the click -- that IS the
+    // ad on the sites this path exists for. elementFromPoint sees the iframe
+    // element itself (never its contents), which is exactly what we want. The
+    // remembered event target is the fallback when the point lookup misses
+    // (or isn't implemented, as in test DOMs).
+    const fromPoint =
+      typeof document.elementFromPoint === "function"
+        ? document.elementFromPoint(x, y)
+        : null;
+    const under = fromPoint || target;
+
+    let node = under;
+    while (node && node !== document.body) {
+      const tag = node.tagName;
+
+      if (tag === "IFRAME" || tag === "VIDEO" || tag === "OBJECT" || tag === "EMBED") {
+        return node.getBoundingClientRect();
+      }
+
+      let adContainer = null;
+      try {
+        adContainer = node.matches && node.matches(AD_SELECTOR) ? node : null;
+      } catch (error) {
+        /* selector support varies; fall through */
+      }
+
+      if (adContainer) return node.getBoundingClientRect();
+
+      node = node.parentElement;
+    }
+
+    // Nothing ad-shaped in the ancestry: fall back to the nearest block with
+    // real size, so the crop is the thing clicked rather than the whole page.
+    let block = under;
+    while (block && block !== document.body) {
+      const rect = block.getBoundingClientRect();
+      if (rect.width >= 120 && rect.height >= 80) return rect;
+      block = block.parentElement;
+    }
+
+    return null;
+  }
+
+  async function captureAndAnalyze() {
+    const rect = captureTargetRect();
+
+    if (!rect) {
+      showError("Right-click on the ad itself, then choose the screenshot option again.");
+      return;
+    }
+
+    await runCapture(rect);
+  }
+
+  async function runCapture(rect) {
+    // Keep ALL of our UI hidden through phase 1, so the screenshot can never
+    // contain our own pill or panel. Phase 1 is only the screenshot + crop
+    // (~100ms), so there is no meaningful feedback gap.
+    hidePill();
+
+    if (!panel.hidden) {
+      closePanel();
+      // closePanel's slide-out takes 200ms before it sets hidden; wait it out
+      // or a re-analysis of an ad under the panel photographs the old panel.
+      await new Promise((resolve) => setTimeout(resolve, 260));
+    }
+
+    const region = {
+      left: Math.max(0, rect.left),
+      top: Math.max(0, rect.top),
+      width: Math.min(rect.width, window.innerWidth - Math.max(0, rect.left)),
+      height: Math.min(rect.height, window.innerHeight - Math.max(0, rect.top)),
+      devicePixelRatio: window.devicePixelRatio || 1,
+    };
+
+    let captured;
+
+    try {
+      captured = await chrome.runtime.sendMessage({ type: "captureRegion", region: region });
+    } catch (error) {
+      showError("The extension couldn't reach its background worker. Try reloading the page.");
+      return;
+    }
+
+    if (!captured || !captured.ok) {
+      showError((captured && captured.error) || "Couldn't photograph that ad.");
+      return;
+    }
+
+    // Screenshot is taken -- now the slow part, with the busy panel up.
+    $(".ai-busy-copy").textContent = "Reading the words off that ad…";
+    openPanel("busy");
+
+    let response;
+
+    try {
+      response = await chrome.runtime.sendMessage({ type: "analyzeCapture" });
+    } catch (error) {
+      showError("The extension couldn't reach its background worker. Try reloading the page.");
+      return;
+    }
+
+    if (!response || !response.ok) {
+      showError(
+        (response && (response.error || (response.data && response.data.error))) ||
+          "Couldn't analyze that capture."
+      );
+      return;
+    }
+
+    render(response.data);
+  }
+
+  /* ── Trigger 5: the context menu / popup (from background.js) ─ */
 
   chrome.runtime.onMessage.addListener((message) => {
     if (!message) return;
 
     if (message.type === "analyze") analyze(message.payload);
     if (message.type === "startPicking") startPicking();
+    if (message.type === "captureRequested") captureAndAnalyze();
   });
 
   /* ── Analysis ───────────────────────────────────────────────── */
