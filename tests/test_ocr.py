@@ -35,6 +35,34 @@ def test_all_caps_two_word_merge_is_split():
     assert ocr.repair_spacing("ACTNOW") == "ACT NOW"
 
 
+@pytest.mark.parametrize(
+    "merged,expected",
+    [
+        ("nowbefore", "now before"),      # from "Act nowbefore this offer..."
+        ("thisseason", "this season"),
+        ("onlytoday", "only today"),
+    ],
+)
+def test_lowercase_two_word_merges_are_split(merged, expected):
+    """Body text merged by OCR keeps that text's uniform case.
+
+    These matter: "Act nowbefore" hides the "act now" trigger phrase entirely,
+    so the tactic goes undetected.
+    """
+    assert ocr.repair_spacing(merged) == expected
+
+
+def test_number_prefixed_merge_is_split():
+    """A digit run carries its own boundary, so the short half is fine."""
+    assert ocr.repair_spacing("48HOURS") == "48 HOURS"
+
+
+@pytest.mark.parametrize("token", ["MemoryMax", "PayPal", "YouTube", "COSTCO"])
+def test_mixed_case_compounds_are_never_split(token):
+    """An internal capital is the brand signature -- the one case we protect."""
+    assert ocr.repair_spacing(token) == token
+
+
 # ── Space repair: things that must NOT be split ─────────────────
 
 
@@ -120,6 +148,7 @@ def test_missing_backend_raises_a_useful_error(monkeypatch):
 
 @pytest.mark.ocr
 @pytest.mark.slow
+@pytest.mark.renders
 def test_reads_text_off_an_ad_image(ad_image_bytes):
     result = ocr.extract_text(ad_image_bytes)
 
@@ -150,6 +179,7 @@ def test_result_has_the_keys_the_front_end_reads(ad_image_bytes):
 
 @pytest.mark.ocr
 @pytest.mark.slow
+@pytest.mark.renders
 def test_repaired_flag_reflects_whether_text_changed(ad_image_bytes):
     result = ocr.extract_text(ad_image_bytes)
     assert result["repaired"] == (result["text"] != result["raw_text"])

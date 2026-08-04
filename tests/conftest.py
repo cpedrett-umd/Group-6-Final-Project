@@ -14,9 +14,11 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 APP_DIRECTORY = REPO_ROOT / "app"
+SAMPLES_DIRECTORY = REPO_ROOT / "samples"
 
-if str(APP_DIRECTORY) not in sys.path:
-    sys.path.insert(0, str(APP_DIRECTORY))
+for directory in (APP_DIRECTORY, SAMPLES_DIRECTORY):
+    if str(directory) not in sys.path:
+        sys.path.insert(0, str(directory))
 
 
 # ── Sample ad text ──────────────────────────────────────────────
@@ -57,19 +59,29 @@ def fear_ad():
 # ── Images ──────────────────────────────────────────────────────
 
 
+def has_scalable_font():
+    """Whether this machine has a font we can render legible text with.
+
+    Pillow's bitmap default renders at a fixed tiny size that OCR cannot read,
+    so tests depending on rendered text skip rather than fail confusingly.
+    """
+    from make_images import find_font
+
+    return find_font(24) is not None
+
+
 def render_ad_image(lines, width=1000, height=None, font_size=32):
     """Render text as a PNG, standing in for an ad screenshot."""
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw
+
+    from make_images import find_font
 
     height = height or (60 + len(lines) * (font_size + 18))
 
     image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image)
 
-    try:
-        font = ImageFont.truetype("arial.ttf", font_size)
-    except OSError:  # pragma: no cover - font availability is platform-specific
-        font = ImageFont.load_default()
+    font = find_font(font_size)
 
     y = 30
     for line in lines:
@@ -132,6 +144,9 @@ def pytest_configure(config):
     )
     config.addinivalue_line("markers", "ocr: needs an OCR backend installed")
     config.addinivalue_line("markers", "slow: takes more than a second")
+    config.addinivalue_line(
+        "markers", "renders: needs a scalable system font to draw a test image"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -160,9 +175,16 @@ def pytest_collection_modifyitems(config, items):
     skip_ocr = pytest.mark.skip(
         reason="no OCR backend - run `pip install rapidocr-onnxruntime`"
     )
+    skip_renders = pytest.mark.skip(
+        reason="no scalable system font - install DejaVu or Liberation fonts"
+    )
+
+    can_render = has_scalable_font()
 
     for item in items:
         if "model" in item.keywords and not has_model:
             item.add_marker(skip_model)
         if "ocr" in item.keywords and not has_ocr:
             item.add_marker(skip_ocr)
+        if "renders" in item.keywords and not can_render:
+            item.add_marker(skip_renders)

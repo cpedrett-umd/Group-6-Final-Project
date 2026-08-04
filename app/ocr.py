@@ -33,10 +33,19 @@ _MIN_CAPS_LENGTH = 6
 _MIN_PART_LENGTH = 2
 
 # A 2-way split is the risky shape -- it is what a compound brand name looks
-# like ("MemoryMax", "PayPal", "Trustpilot"). Those are only accepted for
-# all-caps runs whose halves are both substantial, which keeps "ACT NOW" while
-# leaving "COSTCO" (-> COST/CO) alone.
-_MIN_CAPS_PART_LENGTH = 3
+# like. Case is the usable signal: brand compounds carry an internal capital
+# ("MemoryMax", "PayPal", "YouTube") or are capitalised ("Trustpilot"), whereas
+# a run that OCR merged out of ordinary body text keeps that text's uniform
+# case ("nowbefore", "thisseason", "ACTNOW").
+#
+# So 2-way splits are accepted only for runs that are entirely upper or
+# entirely lower case, and rejected for mixed case. Both halves must also be
+# substantial, which keeps "ACT NOW" while leaving "COSTCO" (-> COST/CO) alone.
+#
+# The cost is real but one-directional: "Yourhome" is structurally identical to
+# "Trustpilot", so merges of a capitalised word stay merged. Preserving a brand
+# the panel quotes back to the user matters more than recovering one space.
+_MIN_WORD_PART_LENGTH = 3
 
 # Splitting is applied per run of letters/digits so that punctuation survives:
 # wordninja discards anything non-alphanumeric, which would silently turn
@@ -131,10 +140,17 @@ def _split_run(run: str) -> str:
         return run
 
     if len(parts) == 2:
-        if not is_upper:
+        # Mixed case is the brand-compound signature -- leave it alone.
+        if not (is_upper or run.islower()):
             return run
 
-        if any(len(part) < _MIN_CAPS_PART_LENGTH for part in parts):
+        # Numbers carry their own boundary ("48HOURS"), so only word parts
+        # need to be substantial.
+        if any(
+            len(part) < _MIN_WORD_PART_LENGTH
+            for part in parts
+            if not part.isdigit()
+        ):
             return run
 
     return " ".join(parts)

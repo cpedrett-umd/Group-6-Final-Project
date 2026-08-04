@@ -172,6 +172,7 @@ def test_malformed_json_is_rejected_not_crashed(client):
 @pytest.mark.model
 @pytest.mark.ocr
 @pytest.mark.slow
+@pytest.mark.renders
 def test_analyze_image_runs_ocr_then_the_model(client, ad_image_bytes):
     response = client.post(
         "/api/analyze",

@@ -1,0 +1,41 @@
+# AdInsight — every dependency, for every part of the project.
+#
+#     pip install -r requirements.txt
+#
+# Installs the model, both front ends, the dataset scripts, and the test
+# suite. The per-directory requirements files still exist if you only need one
+# piece (modeling/, app/, datasets/text_processing/).
+#
+# Python 3.10+. Works on macOS, Windows, and Linux; every dependency below has
+# wheels for all three, including Apple Silicon. Nothing here needs a compiler
+# or a system-level installer.
+
+# ── Model: tokenizer, classifier, tuning ────────────────────────
+torch>=2.0
+transformers>=4.40
+scikit-learn>=1.4
+numpy>=1.26
+pandas>=2.0
+hyperopt>=0.2.7             # TPE search in modeling/train_hyperopt.py
+
+# ── App: API and desktop window ─────────────────────────────────
+flask>=3.0                  # API + static serving (brings in werkzeug)
+pywebview>=5.0              # native window for app/desktop.py
+                            # pulls pythonnet on Windows (WebView2) and
+                            # pyobjc on macOS (WebKit) automatically
+
+# ── Input processing: images -> text ────────────────────────────
+rapidocr-onnxruntime>=1.3   # OCR; ~15MB of ONNX models on first run
+pillow>=10.0                # image decoding in app/ocr.py
+wordninja>=2.0              # repairs OCR lines whose spaces collapsed;
+                            # app/ocr.py degrades gracefully without it
+
+# ── Dataset build / labeling scripts ────────────────────────────
+datasets>=2.14
+rapidfuzz>=3.0
+
+# ── Tests ───────────────────────────────────────────────────────
+pytest>=8.0
+
+# The browser extension's own tests use Node's built-in runner instead:
+#     cd extension/tests && npm install && npm test

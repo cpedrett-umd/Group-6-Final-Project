@@ -89,15 +89,40 @@ The tool generalizes to any consumer affected by emotionally persuasive advertis
 
 ---
 
-## Project Status (Midsemester)
+## Project Status
+
+**The system runs end to end today.** An ad goes in as text or as a screenshot,
+and a plain-language explanation of its persuasion tactics comes out — through
+either a desktop app or a browser extension.
+
+| Stage | State |
+|---|---|
+| Data engine — collection, cleaning, labeling | **Done** — 3,230 labeled ads, 7 classes |
+| Tokenizer | **Done** — HuggingFace subword, `max_len=128` |
+| Tactic classifier | **Done** — test macro F1 **0.896**, weights committed |
+| Input processing — text + OCR | **Done** — live OCR at request time |
+| Explanation layer | **Done** — [`app/tactics.py`](app/tactics.py) |
+| Review-insight layer | **Not built** — stubbed, flagged in the UI |
+| App surface | **Done** — [`app/`](app/README.md) |
+| Browser-extension surface | **Done** — [`extension/`](extension/README.md) |
+| Usability testing with adults 60+ | **Not started** — the next milestone |
+| Tests | **Done** — 126 Python + 57 JavaScript |
+
+**Known limitation worth stating up front.** The labeled dataset contains no
+`Neutral` rows, so the classifier has no way to report "this ad is fine" — it
+must name one of the seven tactics for every input. On a genuinely clean ad it
+does so confidently (a bakery's opening-hours ad scores 75.8% Social Proof).
+A low-confidence guard suppresses the weakest of these, but not all; see
+[samples/README.md](samples/README.md). The fix is dataset-side — add Neutral
+examples and retrain.
 
 **Decision: persevere.** The problem — and users' appetite for third-party
 evidence — is validated by published consumer research (FTC Consumer Sentinel,
-AARP fraud surveys, BrightLocal, YouGov). The data engine works. The main open
-question is usability, which drives the second half of the semester.
+AARP fraud surveys, BrightLocal, YouGov). The main open question is usability,
+which drives the rest of the semester.
 
-**Built so far — the data engine.** A multi-modal collection pipeline funnels
-two input types into one labeled dataset:
+**The data engine.** A multi-modal collection pipeline funnels two input types
+into one labeled dataset:
 
 - **7,768** ad texts in the unified dataset
 - **2** input modalities piloted — text (regex-based ad-copy scraping) and
@@ -190,67 +215,107 @@ Group-6-Final-Project/
 │   ├── popup.html / popup.js               # Toolbar popup
 │   ├── tests/                              # 57 tests (node:test + jsdom)
 │   └── README.md
-├── tests/                                  # 118 Python tests (pytest)
+├── samples/                                # Test material with measured results
+│   ├── ad_texts.md                         # Nine ad texts to copy-paste
+│   ├── images/                             # Four ad screenshots for the OCR path
+│   └── README.md                           # What each one should produce
+├── tests/                                  # 126 Python tests (pytest)
 ├── docs/                                   # Project docs and reference material
 │   ├── project_overview.pdf
 │   ├── labeling_guidelines.md
+│   ├── Group6_MidSemester_Presentation.pptx
 │   └── workflow_ad_explainer.png           # System architecture diagram
 ├── weekly_reports/                         # Per-week progress reports
+├── .gitattributes                          # Git LFS tracking for *.safetensors
 ├── .gitignore
 └── README.md
 ```
 
-The abstract above describes the full planned system (multimodal input, analysis
-model, review layer, app, and extension). The repository now covers the data and
-tokenization groundwork, the **tuned tactic classifier**, and a **working demo
-front end** for both input modalities. The review-insight layer is the main piece
-still outstanding — `app/reviews.py` holds its stub.
+The abstract above describes the full planned system. The repository now covers
+all of it except the **review-insight layer**, which is stubbed in
+`app/reviews.py` and clearly flagged as sample data in both front ends.
 
 ---
 
-## Installation
+## Run it yourself
+
+Works on **macOS, Windows, and Linux**. Python 3.10+. Nothing needs a compiler
+or a system-level installer — every dependency ships wheels, Apple Silicon
+included.
+
+### 1. Clone
+
+The model weights live in **Git LFS**, so install it *before* cloning:
+
+```bash
+git lfs install
+```
 
 ```bash
 git clone https://github.com/cpedrett-umd/Group-6-Final-Project.git
-cd Group-6-Final-Project
-
-# Tokenizer (modeling/) — subword tokenization for the base NLP model
-pip install -r modeling/requirements.txt
-
-# Dataset cleaning / labeling scripts (datasets/text_processing/)
-pip install -r "datasets/text_processing/requirements.txt"
 ```
 
-See [modeling/README.md](modeling/README.md) for how to load the pre-tokenized
-dataset or regenerate the tokenizer artifacts.
+Already cloned without LFS? The checkpoint will be a small text pointer instead
+of real weights. Fix it with `git lfs pull`.
 
-## Running the demo
+### 2. Install
 
 ```bash
-pip install -r modeling/requirements.txt -r app/requirements.txt
+pip install -r requirements.txt
 ```
 
-The tuned weights are committed through **Git LFS**, so a clone comes with a
-working model — no training step. Make sure LFS is installed before cloning
-(`git lfs install`); if you cloned without it, run `git lfs pull`.
+That covers everything — model, both front ends, dataset scripts, tests. (The
+per-directory files still exist if you only want one piece.) The first OCR run
+downloads ~15 MB of ONNX models.
 
-**App** — a compact desktop window:
+### 3. Run
+
+**As a desktop app** — a compact window, no browser involved:
 
 ```bash
 python app/desktop.py
 ```
 
-**Browser extension** — start the backend, then load `extension/` unpacked via
-`chrome://extensions` → Developer mode → Load unpacked, and open
-<http://127.0.0.1:5000/demo-page>:
+**As a local web app** — the same UI, and the backend the extension needs:
 
 ```bash
 python app/server.py --warm
 ```
 
-Both surfaces accept ad text or an ad screenshot; OCR reads the words off the
-image and feeds them to the classifier. See [app/README.md](app/README.md) and
-[extension/README.md](extension/README.md).
+Then open <http://127.0.0.1:5000>. (`--warm` loads the model at startup so the
+first analysis isn't slow.)
+
+**As a browser extension** — with the server above running, open
+`chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the
+`extension/` folder. Then visit the built-in demo article:
+
+<http://127.0.0.1:5000/demo-page>
+
+### 4. Try it on the sample ads
+
+[`samples/`](samples/README.md) has nine ad texts and four ad screenshots, with
+**the results each one actually produces** recorded alongside.
+
+- **Paste text** — copy any block from [samples/ad_texts.md](samples/ad_texts.md)
+  into the *Paste ad text* box.
+- **Upload an image** — drop any file from `samples/images/` into the
+  *Upload ad image* tab. OCR reads the words off it, and the panel shows you
+  what it read before the verdict, so a bad scan is visible rather than silently
+  driving the answer.
+- **In the extension** — on the demo page, hover the sponsored block for the
+  *Analyze this ad* button, select any text, or right-click an image. For ads
+  the automatic detector misses, use **Pick an ad on this page** from the
+  toolbar popup: hover anything, click to analyze.
+
+Quick check that the whole pipeline works, without any UI:
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/analyze -F "image=@samples/images/supplement_ad.png"
+```
+
+Expected on that file: six tactics, OCR confidence ~98%. `bakery_ad.png` is the
+deliberate counter-example — it is a clean ad, and the model still flags it,
+for the reason in **Known limitation** above.
 
 ## Tests
 
@@ -262,9 +327,13 @@ python -m pytest tests/ -q
 cd extension/tests && npm install && npm test
 ```
 
-175 tests — 118 Python over the analysis pipeline and API, 57 JavaScript over
-the extension overlay. Tests that need the weights or an OCR backend skip
+183 tests — **126 Python** over the analysis pipeline and API, **57 JavaScript**
+over the extension overlay (Node's built-in runner + jsdom; no browser or server
+needed). Tests that need the weights, an OCR backend, or a system font skip
 rather than fail, so a fresh clone runs green.
+
+See [tests/README.md](tests/README.md) for what's covered and which real bugs
+these caught.
 
 
 ## Team

@@ -1,1 +1,16 @@
+# Normalise line endings so the repo stays consistent across macOS, Windows,
+# and Linux. Without this, a Windows checkout commits CRLF and every file looks
+# fully rewritten to a teammate on macOS.
+* text=auto
+
+# Binary — never touch line endings, never try to diff as text.
+*.png  binary
+*.jpg  binary
+*.pt   binary
+*.pdf  binary
+*.pptx binary
+
+# Model weights are too large for plain git (134 MB against GitHub's 100 MB
+# per-file block), so they live in Git LFS. Requires `git lfs install` before
+# cloning; `git lfs pull` fixes a clone that skipped them.
 *.safetensors filter=lfs diff=lfs merge=lfs -text
