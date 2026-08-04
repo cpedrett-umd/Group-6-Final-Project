@@ -283,11 +283,63 @@
 
   function isSensibleSlotSize(rect) {
     // Big enough to be a real slot, small enough not to be the whole page.
-    if (rect.width < 120 || rect.height < 80) return false;
+    // The floor accommodates the small standard banner sizes — 320x50 and
+    // 468x60 are everywhere — while still excluding tracking pixels and
+    // sliver iframes.
+    if (rect.width < 100 || rect.height < 40) return false;
     if (rect.width > window.innerWidth * 0.95 && rect.height > window.innerHeight * 0.9) {
       return false;
     }
     return true;
+  }
+
+  // The words sites are required to put on native ads. A block carrying one of
+  // these as a short, standalone label is an ad regardless of its class names,
+  // which is what makes detection work on sites (Yahoo among them) whose
+  // markup never says "ad".
+  const SPONSOR_LABELS = new Set([
+    "ad", "ads", "advertisement", "sponsored", "promoted", "paid content",
+    "paid post", "partner content", "sponsored content", "sponsored by",
+  ]);
+
+  function hasSponsoredLabel(element) {
+    // Only short-tag descendants, capped, so hovering a huge container stays
+    // cheap. The label itself is always a tiny element.
+    const nodes = element.querySelectorAll("span, small, sup, b, p, div, a");
+    const limit = Math.min(nodes.length, 60);
+
+    for (let index = 0; index < limit; index += 1) {
+      const node = nodes[index];
+      // A label has no element children and almost no text.
+      if (node.childElementCount !== 0) continue;
+
+      const text = (node.textContent || "").trim().toLowerCase().replace(/[:·|]+$/, "").trim();
+      if (text.length <= 20 && SPONSOR_LABELS.has(text)) return true;
+    }
+
+    return false;
+  }
+
+  /** The nearest hovered ancestor that reads as a labeled native ad. */
+  function labeledAdContainer(target) {
+    let node = target;
+    let depth = 0;
+
+    while (node && node !== document.body && depth < 8) {
+      const rect = node.getBoundingClientRect();
+
+      // Stop growing once the candidate stops looking like a card.
+      if (rect.width > window.innerWidth * 0.95 && rect.height > window.innerHeight * 0.9) {
+        return null;
+      }
+
+      if (isSensibleSlotSize(rect) && hasSponsoredLabel(node)) return node;
+
+      node = node.parentElement;
+      depth += 1;
+    }
+
+    return null;
   }
 
   function isPlausibleAd(element) {
@@ -357,6 +409,19 @@
         return;
       }
 
+      // Native ads with no ad-ish markup, found by the visible "Sponsored" /
+      // "Ad" label they are required to carry (Yahoo's feed items, most
+      // publishers' partner content).
+      const labeled = labeledAdContainer(target);
+
+      if (labeled && (labeled.innerText || "").trim().length >= 40) {
+        cancelHide();
+        showPill(labeled.getBoundingClientRect(), {
+          text: labeled.innerText.trim(),
+        });
+        return;
+      }
+
       // Unreadable ads (iframe / video / text-less ad container): same pill,
       // but clicking it takes the screenshot path.
       const capturable = captureCandidate(target);
@@ -364,6 +429,13 @@
       if (capturable) {
         cancelHide();
         showPill(capturable.getBoundingClientRect(), { captureElement: capturable });
+        return;
+      }
+
+      if (labeled) {
+        // Labeled but wordless (image-only native ad): capture it.
+        cancelHide();
+        showPill(labeled.getBoundingClientRect(), { captureElement: labeled });
       }
     },
     true

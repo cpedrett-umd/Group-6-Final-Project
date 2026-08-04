@@ -194,6 +194,108 @@ describe("pill placement", () => {
   });
 });
 
+describe("small banners and labeled native ads", () => {
+  it("offers the pill on a 320x50 mobile banner iframe", async () => {
+    // Standard small banner sizes failed the old 120x80 floor entirely.
+    const env = createEnvironment();
+    const iframe = env.document.createElement("iframe");
+    iframe.src = "https://securepubads.g.doubleclick.net/x";
+    env.document.body.append(iframe);
+    setRect(iframe, { left: 40, top: 300, width: 320, height: 50 });
+
+    const pill = env.shadow.querySelector(".ai-pill");
+    Object.defineProperty(pill, "offsetWidth", { value: 190, configurable: true });
+    Object.defineProperty(pill, "offsetHeight", { value: 44, configurable: true });
+
+    mouse(env.window, iframe, "mouseover");
+    await tick(env.window);
+
+    assert.equal(pill.hidden, false, "no pill on a 320x50 banner");
+    // Too short to contain the pill, so it sits just below: 300 + 50 + 8.
+    assert.equal(pill.style.top, "358px");
+  });
+
+  it("still ignores tracking-pixel iframes", async () => {
+    const env = createEnvironment();
+    const pixel = env.document.createElement("iframe");
+    pixel.src = "https://cm.g.doubleclick.net/pixel";
+    env.document.body.append(pixel);
+    setRect(pixel, { left: 0, top: 0, width: 1, height: 1 });
+
+    mouse(env.window, pixel, "mouseover");
+    await tick(env.window);
+
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
+  });
+
+  it("detects a native ad by its visible Sponsored label", async () => {
+    // Yahoo's shape: no ad-ish class names anywhere; the only tell is the
+    // "Sponsored" caption the law requires.
+    const env = createEnvironment();
+    const card = env.document.createElement("div");
+    card.className = "stream-item content-card"; // nothing ad-ish
+    card.innerHTML =
+      '<span>Sponsored</span><h3>Seniors Rush To Claim This Benefit</h3>' +
+      "<p>Thousands are already claiming this benefit before the deadline arrives.</p>";
+    env.document.body.append(card);
+    setRect(card, { left: 40, top: 200, width: 500, height: 180 });
+
+    const pill = env.shadow.querySelector(".ai-pill");
+    mouse(env.window, card.querySelector("h3"), "mouseover");
+    await tick(env.window);
+
+    assert.equal(pill.hidden, false, "no pill on a Sponsored-labeled card");
+
+    pill.click();
+    await tick(env.window, 60);
+
+    const sent = env.sent.find((m) => m.type === "analyzeText");
+    assert.ok(sent, "labeled ad did not analyze as text");
+    assert.match(sent.text, /Seniors Rush/);
+  });
+
+  it("does not fire on ordinary content mentioning the word sponsored", async () => {
+    // "sponsored" inside a sentence is not a label; only a short standalone
+    // caption counts.
+    const env = createEnvironment();
+    const article = env.document.createElement("div");
+    article.innerHTML =
+      "<p>The event was sponsored by the local hospital, organizers said, " +
+      "and drew a record crowd of volunteers from around the county.</p>";
+    env.document.body.append(article);
+    setRect(article, { left: 40, top: 200, width: 500, height: 180 });
+
+    mouse(env.window, article.querySelector("p"), "mouseover");
+    await tick(env.window);
+
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
+  });
+
+  it("captures a labeled ad that has a label but no readable copy", async () => {
+    const env = createEnvironment({
+      respond: (m) => {
+        if (m.type === "captureRegion") return { ok: true, captured: true };
+        return { ok: true, data: analysisFixture() };
+      },
+    });
+
+    const card = env.document.createElement("div");
+    card.innerHTML = '<span>Ad</span><img alt="">';
+    env.document.body.append(card);
+    setRect(card, { left: 40, top: 200, width: 300, height: 250 });
+
+    const pill = env.shadow.querySelector(".ai-pill");
+    mouse(env.window, card, "mouseover");
+    await tick(env.window);
+
+    assert.equal(pill.hidden, false);
+
+    pill.click();
+    await tick(env.window, 120);
+    assert.ok(env.sent.some((m) => m.type === "captureRegion"), "image-only labeled ad did not capture");
+  });
+});
+
 describe("text selection", () => {
   function selectText(env, element) {
     const range = env.document.createRange();
