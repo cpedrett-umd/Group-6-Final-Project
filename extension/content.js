@@ -787,6 +787,14 @@
       await new Promise((resolve) => setTimeout(resolve, 260));
     }
 
+    // Setting hidden only *requests* a repaint; captureVisibleTab grabs the
+    // compositor's current frame, which can still show the pill. Wait for a
+    // painted frame plus a little compositor slack — without this the live
+    // capture OCR'd our own button's label into the ad's text.
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => setTimeout(resolve, 90))
+    );
+
     const region = {
       left: Math.max(0, rect.left),
       top: Math.max(0, rect.top),
