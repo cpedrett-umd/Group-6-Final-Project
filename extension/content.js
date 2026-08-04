@@ -445,6 +445,26 @@
     "mouseout",
     (event) => {
       if (host.contains(event.target)) return;
+
+      // The pointer entering a cross-origin iframe is INVISIBLE to this page:
+      // every mouse event while over the ad goes to the ad's own document, so
+      // the mouseover path above never fires for exactly the ads that matter
+      // most. The one signal the parent does get is this mouseout, whose
+      // relatedTarget is the iframe being entered. (Verified live on Yahoo:
+      // synthetic mouseover on the iframe shows the pill, a real pointer
+      // never delivers one.)
+      const entering = event.relatedTarget;
+
+      if (entering && !host.contains(entering)) {
+        const capturable = captureCandidate(entering);
+
+        if (capturable) {
+          cancelHide();
+          showPill(capturable.getBoundingClientRect(), { captureElement: capturable });
+          return;
+        }
+      }
+
       scheduleHide();
     },
     true

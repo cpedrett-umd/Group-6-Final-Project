@@ -661,6 +661,27 @@ describe("screenshot capture (video / iframe ads)", () => {
     });
   }
 
+  it("offers the pill via the parent's mouseout when a real pointer enters the iframe", async () => {
+    // A real pointer over a cross-origin iframe delivers NO events to the
+    // parent page — the only entry signal is mouseout on the element being
+    // left, with relatedTarget set to the iframe. Verified live on Yahoo.
+    const env = captureEnvironment();
+    const iframe = addAdIframe(env);
+    const pill = env.shadow.querySelector(".ai-pill");
+
+    const neighbour = env.document.getElementById("prose");
+    neighbour.dispatchEvent(
+      new env.window.MouseEvent("mouseout", { bubbles: true, relatedTarget: iframe })
+    );
+    await tick(env.window);
+
+    assert.equal(pill.hidden, false, "no pill on iframe entry via mouseout");
+
+    pill.click();
+    await tick(env.window, 150);
+    assert.ok(env.sent.some((m) => m.type === "captureRegion"));
+  });
+
   it("offers the pill when hovering an ad iframe, and clicking it captures", async () => {
     const env = captureEnvironment();
     const iframe = addAdIframe(env);
