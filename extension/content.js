@@ -191,6 +191,7 @@
 
   let pillPayload = null;
   let hideTimer = null;
+  let picking = false; // pick mode; declared here because sensors consult it
 
   function isOnScreen(rect) {
     return (
@@ -579,7 +580,7 @@
   const sensors = new Map(); // ad element -> sensor div
 
   function syncSensors() {
-    if (!hoverEnabled) {
+    if (!hoverEnabled && !picking) {
       sensors.forEach((sensor) => {
         sensor.hidden = true;
       });
@@ -606,16 +607,21 @@
         sensor.className = "ai-sensor";
 
         sensor.addEventListener("mouseenter", () => {
-          if (picking) return;
+          if (picking) {
+            // In pick mode the sensor feeds the pick flow: same dwell, same
+            // box + button, snapped to the iframe's own bounds.
+            beginPickDwell({ element: element, kind: "capture", isAd: true });
+            return;
+          }
           offerAfterDwell(element, () => ({ captureElement: element }));
         });
 
         sensor.addEventListener("mouseleave", scheduleHide);
 
         sensor.addEventListener("click", (event) => {
-          if (picking) return;
           event.preventDefault();
           event.stopPropagation();
+          if (picking) stopPicking();
           hidePill();
           runCapture(element.getBoundingClientRect());
         });
@@ -708,7 +714,6 @@
    * `style.outline` on the page's element -- mutating the host page's styles
    * can trigger its own layout/observer code. */
 
-  let picking = false;
   let pickTarget = null;
 
   const highlight = document.createElement("div");
@@ -744,8 +749,6 @@
     const units = container.querySelectorAll("iframe, video");
 
     for (const unit of units) {
-      if (unit.tagName === "IFRAME" && !isAdFrame(unit)) continue;
-
       const rect = unit.getBoundingClientRect();
 
       if (
@@ -790,7 +793,15 @@
     }
 
     const block = smallestTextBlock(target);
-    if (block) return { element: block, kind: "text", isAd: false };
+    if (block) {
+      // "Text block" is a fallback guess — if an embedded ad unit sits under
+      // the pointer inside it (Yahoo's right rail: a column of display and
+      // video ads plus footer links), the unit is what the user means.
+      const inner = innerAdAtPoint(block, x, y);
+      if (inner) return { element: inner, kind: "capture", isAd: true };
+
+      return { element: block, kind: "text", isAd: false };
+    }
 
     return null;
   }
@@ -816,6 +827,7 @@
     pickHint.hidden = false;
     hidePill();
     closePanel();
+    syncSensors();
   }
 
   function stopPicking() {
@@ -826,6 +838,7 @@
     highlight.classList.remove("ai-highlight-ad");
     pickHint.hidden = true;
     hidePill();
+    syncSensors();
   }
 
   // The outline waits for the same dwell as the pill: while the cursor is
@@ -838,6 +851,18 @@
   function clearPickDwell() {
     clearTimeout(pickDwellTimer);
     pickDwellElement = null;
+  }
+
+  function beginPickDwell(candidate) {
+    if (candidate.element === pickDwellElement) return; // already counting down
+
+    hidePickOffer();
+    pickDwellElement = candidate.element;
+
+    pickDwellTimer = setTimeout(() => {
+      pickTarget = candidate;
+      presentPickOffer();
+    }, DWELL_MS);
   }
 
   /** Draw (or redraw) the box + button for the current pickTarget. */
@@ -893,20 +918,13 @@
       }
 
       const candidate = pickCandidate(event.target, event.clientX, event.clientY);
-      const element = candidate && candidate.element;
 
-      if (element === pickDwellElement) return; // still resting on the same block
+      if (!candidate) {
+        hidePickOffer();
+        return;
+      }
 
-      hidePickOffer();
-
-      if (!element) return;
-
-      pickDwellElement = element;
-
-      pickDwellTimer = setTimeout(() => {
-        pickTarget = candidate;
-        presentPickOffer();
-      }, DWELL_MS);
+      beginPickDwell(candidate);
     },
     true
   );

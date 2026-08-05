@@ -1136,6 +1136,86 @@ describe("pick mode", () => {
     assert.ok(highlight.classList.contains("ai-highlight-ad"));
   });
 
+  it("snaps to an embedded ad inside a plain block (the Yahoo rail case)", async () => {
+    // A sidebar rail with no ad markup at all: footer links plus two embedded
+    // ad units. Pointer on a unit must yield that unit as an amber capture,
+    // not the whole rail as a teal text block.
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const rail = env.document.createElement("div");
+    rail.className = "right-rail"; // nothing ad-ish
+    const links = env.document.createElement("p");
+    links.textContent = "Terms and Privacy Policy · Advertise · About Our Ads · Careers";
+    const adOne = env.document.createElement("iframe");
+    adOne.src = "https://delivery.yahoo-video.example/mosai"; // NOT a known ad host
+    const adTwo = env.document.createElement("iframe");
+    adTwo.src = "https://securepubads.g.doubleclick.net/paramount";
+    rail.append(adOne, adTwo, links);
+    env.document.body.append(rail);
+
+    setRect(rail, { left: 900, top: 60, width: 380, height: 1000 });
+    setRect(adOne, { left: 910, top: 80, width: 360, height: 300 });
+    setRect(adTwo, { left: 910, top: 400, width: 360, height: 300 });
+    setRect(links, { left: 910, top: 620, width: 360, height: 120 });
+
+    // Pointer inside the first unit (event targets the rail).
+    mouse(env.window, rail, "mousemove", { clientX: 1000, clientY: 200 });
+    await tick(env.window, 520);
+
+    const highlight = env.shadow.querySelector(".ai-highlight");
+    assert.equal(highlight.hidden, false);
+    assert.ok(highlight.classList.contains("ai-highlight-ad"), "unit not treated as ad");
+    assert.equal(highlight.style.top, "80px", "boxed the rail, not the unit");
+    assert.equal(highlight.style.height, "300px");
+
+    // Pointer on the footer links: that IS text territory.
+    mouse(env.window, links, "mousemove", { clientX: 1000, clientY: 680 });
+    await tick(env.window, 520);
+
+    assert.equal(highlight.classList.contains("ai-highlight-ad"), false,
+      "footer links wrongly tagged as ad");
+  });
+
+  it("sensors feed pick mode over cross-origin iframes", async () => {
+    // While the pointer is over a cross-origin iframe the page gets no events
+    // at all — the sensor is the only witness, and in pick mode it must drive
+    // the same dwell → box → capture flow.
+    const env = createEnvironment({
+      hoverEnabled: false,
+      respond: (m) => {
+        if (m.type === "captureRegion") return { ok: true, captured: true };
+        return { ok: true, data: analysisFixture({ source: { mode: "image",
+          ocr: { confidence: 0.9, line_count: 1, repaired: false } } }) };
+      },
+    });
+
+    const iframe = env.document.createElement("iframe");
+    iframe.src = "https://safeframe.googlesyndication.com/x";
+    env.document.body.append(iframe);
+    setRect(iframe, { left: 150, top: 120, width: 970, height: 250 });
+
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+    await tick(env.window);
+
+    const sensor = env.host.shadowRoot.querySelector(".ai-sensor:not([hidden])");
+    assert.ok(sensor, "no sensor during pick mode");
+
+    sensor.dispatchEvent(new env.window.MouseEvent("mouseenter"));
+    await tick(env.window, 520);
+
+    const highlight = env.shadow.querySelector(".ai-highlight");
+    assert.equal(highlight.hidden, false, "no box from sensor dwell");
+    assert.equal(highlight.style.width, "970px");
+
+    const click = new env.window.MouseEvent("click", { bubbles: true, cancelable: true });
+    sensor.dispatchEvent(click);
+    await tick(env.window, 300);
+
+    assert.ok(env.sent.some((m) => m.type === "captureRegion"), "sensor click did not capture");
+    assert.equal(env.shadow.querySelector(".ai-pick-hint").hidden, true, "picking did not end");
+  });
+
   it("keeps the offer stable while the pointer moves inside the box", async () => {
     // Nested containers can re-resolve to different candidates as the cursor
     // travels toward the button; the offer must not vanish mid-reach.
