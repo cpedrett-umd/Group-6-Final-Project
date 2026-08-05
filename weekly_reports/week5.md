@@ -46,7 +46,8 @@ No metrics to report yet
 
 ## Challenges / blockers
 
-Audio transcription with api's (faster-whisper) use a capture rate that can cut off words. This leads to disconnected audio chuncks that lose meaning.
+- Audio transcription with api's (faster-whisper) use a capture rate that can cut off words. This leads to disconnected audio chuncks that lose meaning.
+- The capture rate used by faster-whisper with WASAPI can cut off words mid-utterance, producing disconnected chunks that lose their meaning. Since persuasive phrasing depends on intact phrases ("only three left", "doctors are warning"), fragmented transcripts are not usable as classifier input in their current form.
 
 ## Next week's goal
 
