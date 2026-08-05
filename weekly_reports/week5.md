@@ -25,14 +25,20 @@ north_star:
 
 ## Shipped this week
 - <what is now merged or deployed> We started developing the data collection pipeline for text and audio based ads. Text based ads were collected using the regular expressions library and speech from video based ads were collected using faster-whisper and WASAPI.
+- Began the data collection pipeline covering both text-based and video-based ads.
+- Text ads: extraction using regular expressions over collected ad copy.
 
 ## User / validation learning
 
-Today, users usually deal with suspicious or persuasive ads in a manual and
-inconsistent way. Some users ignore the ad if it feels suspicious, while others click
-through and try to judge the product after seeing the landing page. They may Google
-the product or company, check Amazon reviews, search Reddit threads, read comments
-under the ad, ask friends or family members, or report the ad to the platform.
+We spoke informally with friends, family members, and several older relatives about what they do when an ad catches their attention. Everyone had a strategy. The strategies split fairly cleanly by age.
+
+Younger participants verify digitally and alone: search the company or product, check Amazon ratings, look for Reddit threads, and increasingly paste the ad text or a screenshot into an LLM and ask whether it looks legitimate.
+
+Middle-aged and older participants verify socially and by phone: ask friends or family what they think, call the company directly, or search YouTube for videos about the product. Several described buying the product first and forming a judgement afterwards — verification happening after the money was already spent.
+
+External data supports treating the older group as the higher-stakes case, though not in the way we assumed. The FTC reports[https://www.aarp.org/money/scams-fraud/fbi-ftc-report-2025-losses/] that adults 60 and over are actually less likely than adults 18–59 to report losing money to fraud  but when they do lose, they lose far more. Reported losses among adults 60 and over rose roughly fourfold between 2020 and 2024, from about $600 million to $2.4 billion, driven largely by losses over $100,000, and the median loss for the 60+ group was the highest of any age group. Social media is the most common contact method for investment scams across all ages. So the problem is not that older adults fall for more ads  it is that the consequences are heavier and the verification routes available to them are slower.
+
+the evidence users want already exists publicly. Both groups are performing the same underlying task — find out what other people experienced with this product — and both are doing it manually, slowly, and after the ad has already done its persuasive work. Neither group has a single place to drop an ad and get an answer.
 
 ## Metrics snapshot
 
