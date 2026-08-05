@@ -307,6 +307,7 @@
     // cheap. The label itself is always a tiny element.
     const nodes = element.querySelectorAll("span, small, sup, b, p, div, a");
     const limit = Math.min(nodes.length, 60);
+    const elementRect = element.getBoundingClientRect();
 
     for (let index = 0; index < limit; index += 1) {
       const node = nodes[index];
@@ -314,10 +315,31 @@
       if (node.childElementCount !== 0) continue;
 
       const text = (node.textContent || "").trim().toLowerCase().replace(/[:·|]+$/, "").trim();
-      if (text.length <= 20 && SPONSOR_LABELS.has(text)) return true;
+      if (text.length > 20 || !SPONSOR_LABELS.has(text)) continue;
+
+      // The disclosure caption sits at the top (or just off the bottom) of
+      // ITS OWN card. A label deep in the middle of the hovered block means
+      // the block is a feed that merely contains an ad, not the ad itself —
+      // matching that put an "Analyze" pill over ordinary articles.
+      const labelRect = node.getBoundingClientRect();
+      const fromTop = labelRect.top - elementRect.top;
+      const fromBottom = elementRect.bottom - labelRect.bottom;
+
+      if (fromTop <= 140 || fromBottom <= 60) return true;
     }
 
     return false;
+  }
+
+  // A single native-ad card is a small DOM subtree. A feed column holding many
+  // articles (one of which is an ad) has hundreds of elements — treating it as
+  // "the ad" is how the pill ended up over ordinary text.
+  const MAX_CARD_ELEMENTS = 90;
+
+  function isCardSized(element, rect) {
+    if (rect.height > window.innerHeight * 0.9) return false;
+    if (rect.width * rect.height > window.innerWidth * window.innerHeight * 0.5) return false;
+    return element.querySelectorAll("*").length <= MAX_CARD_ELEMENTS;
   }
 
   /** The nearest hovered ancestor that reads as a labeled native ad. */
@@ -333,7 +355,13 @@
         return null;
       }
 
-      if (isSensibleSlotSize(rect) && hasSponsoredLabel(node)) return node;
+      if (
+        isSensibleSlotSize(rect) &&
+        isCardSized(node, rect) &&
+        hasSponsoredLabel(node)
+      ) {
+        return node;
+      }
 
       node = node.parentElement;
       depth += 1;
@@ -386,6 +414,33 @@
     return null;
   }
 
+  // The pill only appears after the pointer RESTS on an ad. Without this it
+  // flickered on and off while scrolling past ads and reading nearby text —
+  // an offer that follows the cursor around reads as nagging, not help.
+  // Moving within the same ad keeps the countdown; leaving it, scrolling, or
+  // moving onto ordinary content resets it.
+  const DWELL_MS = 400;
+
+  let dwellTimer = null;
+  let dwellElement = null;
+
+  function offerAfterDwell(element, makePayload) {
+    if (element === dwellElement) return; // already counting down on this ad
+
+    clearTimeout(dwellTimer);
+    dwellElement = element;
+
+    dwellTimer = setTimeout(() => {
+      cancelHide();
+      showPill(element.getBoundingClientRect(), makePayload());
+    }, DWELL_MS);
+  }
+
+  function cancelDwell() {
+    clearTimeout(dwellTimer);
+    dwellElement = null;
+  }
+
   document.addEventListener(
     "mouseover",
     (event) => {
@@ -402,10 +457,7 @@
       }
 
       if (candidate && isPlausibleAd(candidate)) {
-        cancelHide();
-        showPill(candidate.getBoundingClientRect(), {
-          text: candidate.innerText.trim(),
-        });
+        offerAfterDwell(candidate, () => ({ text: candidate.innerText.trim() }));
         return;
       }
 
@@ -415,10 +467,7 @@
       const labeled = labeledAdContainer(target);
 
       if (labeled && (labeled.innerText || "").trim().length >= 40) {
-        cancelHide();
-        showPill(labeled.getBoundingClientRect(), {
-          text: labeled.innerText.trim(),
-        });
+        offerAfterDwell(labeled, () => ({ text: labeled.innerText.trim() }));
         return;
       }
 
@@ -427,16 +476,18 @@
       const capturable = captureCandidate(target);
 
       if (capturable) {
-        cancelHide();
-        showPill(capturable.getBoundingClientRect(), { captureElement: capturable });
+        offerAfterDwell(capturable, () => ({ captureElement: capturable }));
         return;
       }
 
       if (labeled) {
         // Labeled but wordless (image-only native ad): capture it.
-        cancelHide();
-        showPill(labeled.getBoundingClientRect(), { captureElement: labeled });
+        offerAfterDwell(labeled, () => ({ captureElement: labeled }));
+        return;
       }
+
+      // Ordinary content: whatever ad the pointer was resting toward, it left.
+      cancelDwell();
     },
     true
   );
@@ -459,8 +510,7 @@
         const capturable = captureCandidate(entering);
 
         if (capturable) {
-          cancelHide();
-          showPill(capturable.getBoundingClientRect(), { captureElement: capturable });
+          offerAfterDwell(capturable, () => ({ captureElement: capturable }));
           return;
         }
       }
@@ -506,8 +556,7 @@
         sensor.className = "ai-sensor";
 
         sensor.addEventListener("mouseenter", () => {
-          cancelHide();
-          showPill(element.getBoundingClientRect(), { captureElement: element });
+          offerAfterDwell(element, () => ({ captureElement: element }));
         });
 
         sensor.addEventListener("mouseleave", scheduleHide);
@@ -586,7 +635,14 @@
     }, 10);
   });
 
-  window.addEventListener("scroll", hidePill, { passive: true });
+  window.addEventListener(
+    "scroll",
+    () => {
+      hidePill();
+      cancelDwell();
+    },
+    { passive: true }
+  );
   window.addEventListener("resize", hidePill);
 
   /* ── Trigger 3: pick mode — hover anything, click to analyze ── */

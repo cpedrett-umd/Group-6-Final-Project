@@ -71,7 +71,7 @@ describe("ad detection", () => {
     const { ad, pill } = layOutAd(env);
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false);
     assert.equal(pill.querySelector("span").textContent, "Analyze this ad");
@@ -85,7 +85,7 @@ describe("ad detection", () => {
     setRect(prose, { left: 0, top: 0, width: 600, height: 120 });
 
     mouse(env.window, prose, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
   });
@@ -98,7 +98,7 @@ describe("ad detection", () => {
     setRect(tiny, { left: 0, top: 0, width: 40, height: 20 });
 
     mouse(env.window, tiny, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
   });
@@ -111,7 +111,7 @@ describe("ad detection", () => {
     setRect(tiny, { left: 0, top: 0, width: 300, height: 200 });
 
     mouse(env.window, tiny, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
   });
@@ -122,7 +122,7 @@ describe("ad detection", () => {
 
     const cta = env.document.getElementById("cta");
     mouse(env.window, cta, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false);
   });
@@ -136,7 +136,7 @@ describe("pill placement", () => {
     const { ad, pill } = layOutAd(env, { left: 100, top: 100, width: 400, height: 200 });
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.style.top, "246px"); // (100 + 200) - 44 - 10, inside
   });
@@ -148,7 +148,7 @@ describe("pill placement", () => {
     const { ad, pill } = layOutAd(env, { left: 100, top: 100, width: 400, height: 82 });
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.style.top, "128px"); // (100 + 82) - 44 - 10, inside
   });
@@ -162,7 +162,7 @@ describe("pill placement", () => {
     const { ad, pill } = layOutAd(env, { left: -50, top: -100, width: 400, height: 1400 });
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     const top = parseFloat(pill.style.top);
     const left = parseFloat(pill.style.left);
@@ -176,7 +176,7 @@ describe("pill placement", () => {
     const { ad, pill } = layOutAd(env, { left: 100, top: 3000, width: 400, height: 300 });
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, true);
   });
@@ -186,7 +186,7 @@ describe("pill placement", () => {
     const { ad, pill } = layOutAd(env);
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
     assert.equal(pill.hidden, false);
 
     env.window.dispatchEvent(new env.window.Event("scroll"));
@@ -240,7 +240,7 @@ describe("ad-iframe hover sensors", () => {
     const { sensor } = withSensor(env);
 
     sensor.dispatchEvent(new env.window.MouseEvent("mouseenter"));
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(env.shadow.querySelector(".ai-pill").hidden, false);
   });
@@ -288,7 +288,7 @@ describe("small banners and labeled native ads", () => {
     Object.defineProperty(pill, "offsetHeight", { value: 44, configurable: true });
 
     mouse(env.window, iframe, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false, "no pill on a 320x50 banner");
     // Too short to contain the pill, so it sits just below: 300 + 50 + 8.
@@ -303,7 +303,7 @@ describe("small banners and labeled native ads", () => {
     setRect(pixel, { left: 0, top: 0, width: 1, height: 1 });
 
     mouse(env.window, pixel, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
   });
@@ -322,7 +322,7 @@ describe("small banners and labeled native ads", () => {
 
     const pill = env.shadow.querySelector(".ai-pill");
     mouse(env.window, card.querySelector("h3"), "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false, "no pill on a Sponsored-labeled card");
 
@@ -346,7 +346,7 @@ describe("small banners and labeled native ads", () => {
     setRect(article, { left: 40, top: 200, width: 500, height: 180 });
 
     mouse(env.window, article.querySelector("p"), "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
   });
@@ -366,7 +366,7 @@ describe("small banners and labeled native ads", () => {
 
     const pill = env.shadow.querySelector(".ai-pill");
     mouse(env.window, card, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false);
 
@@ -431,7 +431,7 @@ describe("analysis requests", () => {
     const { ad, pill } = layOutAd(env);
 
     mouse(env.window, ad, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
     pill.click();
     await tick(env.window, 60);
 
@@ -755,7 +755,7 @@ describe("screenshot capture (video / iframe ads)", () => {
     neighbour.dispatchEvent(
       new env.window.MouseEvent("mouseout", { bubbles: true, relatedTarget: iframe })
     );
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false, "no pill on iframe entry via mouseout");
 
@@ -774,7 +774,7 @@ describe("screenshot capture (video / iframe ads)", () => {
     // Entering a cross-origin iframe still fires mouseover on the iframe
     // element itself in the parent page — the one event we get, and enough.
     mouse(env.window, iframe, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false, "no pill on ad-iframe hover");
     // Inside the ad, bottom edge: (120 + 250) - 44 - 10.
@@ -806,7 +806,7 @@ describe("screenshot capture (video / iframe ads)", () => {
 
     const pill = env.shadow.querySelector(".ai-pill");
     mouse(env.window, wrapper, "mouseover");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     assert.equal(pill.hidden, false, "no pill on text-less ad container");
 
