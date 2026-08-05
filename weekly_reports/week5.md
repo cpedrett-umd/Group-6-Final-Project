@@ -48,6 +48,22 @@ No metrics to report yet
 
 - Audio transcription with api's (faster-whisper) use a capture rate that can cut off words. This leads to disconnected audio chuncks that lose meaning.
 - The capture rate used by faster-whisper with WASAPI can cut off words mid-utterance, producing disconnected chunks that lose their meaning. Since persuasive phrasing depends on intact phrases ("only three left", "doctors are warning"), fragmented transcripts are not usable as classifier input in their current form.
+- Audio transcription blocker — measured
+
+  -We hand-transcribed a video ad (593 words) and compared it against the
+   faster-whisper + WASAPI capture pipeline (model: base).
+
+  -Word accuracy was 95.4% (WER 4.6%), which on its own looks acceptable.
+The breakdown does not: deletions account for 0% of all errors, the
+signature of words clipped at capture-window boundaries rather than misheard.
+
+  -More importantly, only 3 of 3 persuasion trigger phrases
+present in the reference survived transcription. Lost: none.
+
+  -Because the classifier and the trigger-phrase matcher both depend on this
+vocabulary, a headline accuracy figure materially overstates how usable the audio
+path is. The errors are not randomly distributed — they concentrate in exactly
+the signal the system needs.
 
 ## Next week's goal
 
