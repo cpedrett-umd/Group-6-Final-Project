@@ -24,9 +24,7 @@ north_star:
 
 
 ## Shipped this week
-- <what is now merged or deployed> 
-
-We started developing the data collection pipeline for text and audio based ads. Text based ads were collected using the regular expressions library and speech from video based ads were collected using faster-whisper and WASAPI.
+- <what is now merged or deployed> We started developing the data collection pipeline for text and audio based ads. Text based ads were collected using the regular expressions library and speech from video based ads were collected using faster-whisper and WASAPI.
 
 ## User / validation learning
 
