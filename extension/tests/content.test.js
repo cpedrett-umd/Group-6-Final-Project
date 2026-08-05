@@ -1104,6 +1104,38 @@ describe("pick mode", () => {
     assert.equal(cap.region.width, 728);
   });
 
+  it("snaps to the ad unit under the pointer, not its wrapper", async () => {
+    // Publishers wrap ad units in larger containers and transparent click
+    // overlays; the pointer's coordinates decide which one the user means.
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const wrapper = env.document.createElement("div");
+    wrapper.className = "ad-slot";
+    const overlay = env.document.createElement("a");
+    overlay.href = "https://example.com/click";
+    overlay.textContent = " "; // transparent full-card click overlay
+    const unit = env.document.createElement("iframe");
+    unit.src = "https://securepubads.g.doubleclick.net/creative";
+    wrapper.append(overlay, unit);
+    env.document.body.append(wrapper);
+
+    setRect(wrapper, { left: 50, top: 100, width: 900, height: 500 });
+    setRect(overlay, { left: 50, top: 100, width: 900, height: 500 });
+    setRect(unit, { left: 136, top: 250, width: 728, height: 90 });
+
+    // Pointer physically inside the 728x90 unit, but the event targets the
+    // overlay that covers the whole wrapper.
+    mouse(env.window, overlay, "mousemove", { clientX: 400, clientY: 280 });
+    await tick(env.window, 520);
+
+    const highlight = env.shadow.querySelector(".ai-highlight");
+    assert.equal(highlight.hidden, false);
+    assert.equal(highlight.style.width, "728px", "boxed the wrapper, not the ad unit");
+    assert.equal(highlight.style.top, "250px");
+    assert.ok(highlight.classList.contains("ai-highlight-ad"));
+  });
+
   it("keeps the offer stable while the pointer moves inside the box", async () => {
     // Nested containers can re-resolve to different candidates as the cursor
     // travels toward the button; the offer must not vanish mid-reach.

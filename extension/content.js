@@ -730,9 +730,44 @@
    * and unreadable ads (iframes, video) become pickable at all. Ordinary
    * content stays pickable as a plain text block.
    */
-  function pickCandidate(target) {
+  /** The ad unit inside `container` sitting directly under the pointer, if any.
+   *
+   * Publishers wrap ad units in layers of containers (and transparent click
+   * overlays), so the element under the cursor is often a wrapper far larger
+   * than the ad. The pointer's coordinates disambiguate: if an ad iframe or
+   * video inside the wrapper contains the point, THAT is what the user is
+   * over, and the box should be its box.
+   */
+  function innerAdAtPoint(container, x, y) {
+    if (x === undefined || y === undefined) return null;
+
+    const units = container.querySelectorAll("iframe, video");
+
+    for (const unit of units) {
+      if (unit.tagName === "IFRAME" && !isAdFrame(unit)) continue;
+
+      const rect = unit.getBoundingClientRect();
+
+      if (
+        isSensibleSlotSize(rect) &&
+        x >= rect.left && x <= rect.right &&
+        y >= rect.top && y <= rect.bottom
+      ) {
+        return unit;
+      }
+    }
+
+    return null;
+  }
+
+  function pickCandidate(target, x, y) {
     const capturable = captureCandidate(target);
-    if (capturable) return { element: capturable, kind: "capture", isAd: true };
+    if (capturable) {
+      const inner = capturable.tagName === "IFRAME" || capturable.tagName === "VIDEO"
+        ? null
+        : innerAdAtPoint(capturable, x, y);
+      return { element: inner || capturable, kind: "capture", isAd: true };
+    }
 
     let marked = null;
     try {
@@ -741,11 +776,15 @@
       marked = null;
     }
     if (marked && isPlausibleAd(marked)) {
+      const inner = innerAdAtPoint(marked, x, y);
+      if (inner) return { element: inner, kind: "capture", isAd: true };
       return { element: marked, kind: "text", isAd: true };
     }
 
     const labeled = labeledAdContainer(target);
     if (labeled) {
+      const inner = innerAdAtPoint(labeled, x, y);
+      if (inner) return { element: inner, kind: "capture", isAd: true };
       const hasCopy = (labeled.innerText || "").trim().length >= 40;
       return { element: labeled, kind: hasCopy ? "text" : "capture", isAd: true };
     }
@@ -853,7 +892,7 @@
         return; // still inside the offered box — keep it stable
       }
 
-      const candidate = pickCandidate(event.target);
+      const candidate = pickCandidate(event.target, event.clientX, event.clientY);
       const element = candidate && candidate.element;
 
       if (element === pickDwellElement) return; // still resting on the same block
@@ -882,7 +921,7 @@
       event.preventDefault();
       event.stopPropagation();
 
-      const picked = pickTarget || pickCandidate(event.target);
+      const picked = pickTarget || pickCandidate(event.target, event.clientX, event.clientY);
 
       stopPicking();
 
