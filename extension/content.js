@@ -801,20 +801,64 @@
     pickDwellElement = null;
   }
 
+  /** Draw (or redraw) the box + button for the current pickTarget. */
+  function presentPickOffer() {
+    if (!pickTarget) return;
+
+    const element = pickTarget.element;
+    const rect = element.getBoundingClientRect();
+
+    // The ad scrolled away: withdraw rather than float mid-screen.
+    if (!isOnScreen(rect)) {
+      hidePickOffer();
+      return;
+    }
+
+    highlight.hidden = false;
+    // Detected ads get the amber "this is an ad" treatment; ordinary
+    // blocks the neutral one.
+    highlight.classList.toggle("ai-highlight-ad", pickTarget.isAd);
+    highlight.style.left = `${rect.left}px`;
+    highlight.style.top = `${rect.top}px`;
+    highlight.style.width = `${rect.width}px`;
+    highlight.style.height = `${rect.height}px`;
+
+    // The box shows WHAT was found; the button says what to do about it.
+    // Clicking either the pill or the box analyzes.
+    showPill(
+      rect,
+      pickTarget.kind === "capture"
+        ? { captureElement: element }
+        : { text: (element.innerText || "").trim() },
+      pickTarget.isAd ? "Analyze this ad" : "Analyze this text"
+    );
+  }
+
+  function hidePickOffer() {
+    pickTarget = null;
+    clearPickDwell();
+    highlight.hidden = true;
+    hidePill();
+  }
+
   document.addEventListener(
     "mousemove",
     (event) => {
       if (!picking || host.contains(event.target)) return;
+
+      if (
+        pickTarget &&
+        (pickTarget.element === event.target || pickTarget.element.contains(event.target))
+      ) {
+        return; // still inside the offered box — keep it stable
+      }
 
       const candidate = pickCandidate(event.target);
       const element = candidate && candidate.element;
 
       if (element === pickDwellElement) return; // still resting on the same block
 
-      clearPickDwell();
-      highlight.hidden = true;
-      hidePill();
-      pickTarget = null;
+      hidePickOffer();
 
       if (!element) return;
 
@@ -822,26 +866,7 @@
 
       pickDwellTimer = setTimeout(() => {
         pickTarget = candidate;
-
-        const rect = element.getBoundingClientRect();
-        highlight.hidden = false;
-        // Detected ads get the amber "this is an ad" treatment; ordinary
-        // blocks the neutral one.
-        highlight.classList.toggle("ai-highlight-ad", candidate.isAd);
-        highlight.style.left = `${rect.left}px`;
-        highlight.style.top = `${rect.top}px`;
-        highlight.style.width = `${rect.width}px`;
-        highlight.style.height = `${rect.height}px`;
-
-        // The box shows WHAT was found; the button says what to do about it.
-        // Clicking either the pill or the box analyzes.
-        showPill(
-          rect,
-          candidate.kind === "capture"
-            ? { captureElement: element }
-            : { text: (element.innerText || "").trim() },
-          candidate.isAd ? "Analyze this ad" : "Analyze this text"
-        );
+        presentPickOffer();
       }, DWELL_MS);
     },
     true
@@ -874,6 +899,18 @@
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && picking) stopPicking();
+  });
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (picking) presentPickOffer();
+    },
+    { passive: true }
+  );
+
+  window.addEventListener("resize", () => {
+    if (picking) presentPickOffer();
   });
 
   /* ── Trigger 4: screenshot capture (video / iframe ads) ─────── */

@@ -1104,6 +1104,54 @@ describe("pick mode", () => {
     assert.equal(cap.region.width, 728);
   });
 
+  it("keeps the offer stable while the pointer moves inside the box", async () => {
+    // Nested containers can re-resolve to different candidates as the cursor
+    // travels toward the button; the offer must not vanish mid-reach.
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const ad = env.document.getElementById("ad");
+    setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+
+    mouse(env.window, ad, "mousemove");
+    await tick(env.window, 520);
+    assert.equal(env.shadow.querySelector(".ai-highlight").hidden, false);
+
+    // Move over a child inside the boxed ad — different event target, same box.
+    mouse(env.window, env.document.getElementById("cta"), "mousemove");
+    await tick(env.window, 60);
+
+    assert.equal(env.shadow.querySelector(".ai-highlight").hidden, false, "box vanished mid-reach");
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, false, "button vanished mid-reach");
+  });
+
+  it("glues the box to the ad through scrolling", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const ad = env.document.getElementById("ad");
+    setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+
+    mouse(env.window, ad, "mousemove");
+    await tick(env.window, 520);
+
+    // The page scrolls: the ad's viewport position changes.
+    setRect(ad, { left: 100, top: 40, width: 500, height: 300 });
+    env.window.dispatchEvent(new env.window.Event("scroll"));
+    await tick(env.window, 30);
+
+    const highlight = env.shadow.querySelector(".ai-highlight");
+    assert.equal(highlight.hidden, false, "box hidden after scroll");
+    assert.equal(highlight.style.top, "40px", "box left parked at the old position");
+
+    // Scrolled fully out of view: the offer withdraws instead of floating.
+    setRect(ad, { left: 100, top: 5000, width: 500, height: 300 });
+    env.window.dispatchEvent(new env.window.Event("scroll"));
+    await tick(env.window, 30);
+
+    assert.equal(highlight.hidden, true, "box floating over nothing");
+  });
+
   it("cancels on Escape without analyzing", async () => {
     const env = createEnvironment();
     env.dispatchRuntimeMessage({ type: "startPicking" });
