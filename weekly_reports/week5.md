@@ -1,31 +1,26 @@
 ---
-team: To Be Determined Next Meeting
-week: 5
-date: 7-1-2026
+team: AdInsight — Persuasion-Aware Ad Explainer
+week: 4
+date: 6-24-2026
 members:
   - name: Chris Pedretti
     github: cpedrett-umd
     hat: Engineering | Data&Eval
-  - name: <name>
-    github: <handle>
-    hat:
-  - name: <name>
-    github: <handle>
-    hat:
-
-Problem: Older adults and everyday internet users are often exposed to emotionally
-persuasive online advertisements that use urgency, fear, scarcity, social proof, or
-exaggerated claims to influence purchasing decisions without users recognizing the
-tactic being used.
-Solution: Our tool is designed to analyze the language current adverts use in order to
-determine if it is using an emotionally persuasive tactic.
-Why us: Our group combines real-world ad data collected from social media platforms
-with NLP and vision-language models to create an explainable, ethically focused
-system for analyzing persuasive advertising language, while maintaining a third-party,
-unbiased approach that avoids misleading classifications of ads as scams or false
-advertising.
-MVP: A user can analyze an advertisement and receive transparent feedback if that ad
-is using manipulative/persuasive language.
+  - name: Shashank Ashoka
+    github: shashk09-coder 
+    hat: Architecture | OCR | Agents
+  - name: Ciara Cameron
+    github: Ciaracam
+    hat: Data Quality | Annotation | Evaluation
+  - name: Jonathan Kim
+    github: jonathanjkim5108 
+    hat: Product | Engineering | Data&Eval
+    
+north_star:
+  metric: Task success rate
+  value: 1.75/2
+  previous: 1/1
+---
 
 
 ## Shipped this week
