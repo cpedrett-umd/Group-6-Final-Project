@@ -91,6 +91,7 @@ Finish data collection and merge different modalities into 1 dataset of ad text 
 
 ## Individual contributions
 - Chris (Engineering): I wrote a script using faster-whisper and WASAPI to capture system audio. This will be used to collect ads from various social media sources. https://github.com/cpedrett-umd/Group-6-Final-Project/pull/1
+- Shashank (Evaluation): I evaluated Chris’s faster-whisper and WASAPI transcription pipeline. I tested videos from YouTube and Instagram, then performed a detailed evaluation on one Instagram advertisement by comparing the generated transcript with a manually corrected reference. The model achieved 95.4% word accuracy, a 4.6% word error rate, and preserved all identified persuasion-related phrases.
 
 ## Lean canvas changes (if any)
 - <what shifted this week: user, problem, value proposition, cost, or risk>
