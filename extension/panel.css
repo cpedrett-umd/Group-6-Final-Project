@@ -84,6 +84,27 @@
 
 .ai-highlight[hidden] { display: none; }
 
+/* The picker recognised this block as an ad from its metadata (ad-iframe
+   host, ad markup, or a sponsor label) — amber, with a corner tag, so the
+   user can see the difference from picking plain text. */
+.ai-highlight-ad {
+  border-color: var(--amber);
+  background: rgba(226, 144, 15, .12);
+}
+
+.ai-highlight-ad::after {
+  content: "Ad detected";
+  position: absolute;
+  top: -24px;
+  left: -2px;
+  padding: 2px 9px;
+  border-radius: 5px 5px 0 0;
+  background: var(--amber);
+  color: #fff;
+  font: 700 12px/1.5 "Segoe UI", Arial, sans-serif;
+  letter-spacing: .4px;
+}
+
 .ai-pick-hint {
   position: fixed;
   top: 16px;

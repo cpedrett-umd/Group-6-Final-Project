@@ -604,12 +604,14 @@
         sensor.className = "ai-sensor";
 
         sensor.addEventListener("mouseenter", () => {
+          if (picking) return;
           offerAfterDwell(element, () => ({ captureElement: element }));
         });
 
         sensor.addEventListener("mouseleave", scheduleHide);
 
         sensor.addEventListener("click", (event) => {
+          if (picking) return;
           event.preventDefault();
           event.stopPropagation();
           hidePill();
@@ -714,9 +716,43 @@
   const pickHint = document.createElement("div");
   pickHint.className = "ai-pick-hint";
   pickHint.hidden = true;
-  pickHint.textContent = "Click an ad to analyze it · Esc to cancel";
+  pickHint.textContent = "Rest on an ad, then click to analyze it · Esc to cancel";
 
   wrap.append(highlight, pickHint);
+
+  /** What the picker should offer for a hovered node, ads first.
+   *
+   * The same metadata that drives automatic detection — ad-iframe hosts, ad
+   * markup, sponsor labels — steers the pick, so the outline snaps to the
+   * ACTUAL ad boundary instead of whatever text block sits under the cursor,
+   * and unreadable ads (iframes, video) become pickable at all. Ordinary
+   * content stays pickable as a plain text block.
+   */
+  function pickCandidate(target) {
+    const capturable = captureCandidate(target);
+    if (capturable) return { element: capturable, kind: "capture", isAd: true };
+
+    let marked = null;
+    try {
+      marked = target.closest && target.closest(AD_SELECTOR);
+    } catch (error) {
+      marked = null;
+    }
+    if (marked && isPlausibleAd(marked)) {
+      return { element: marked, kind: "text", isAd: true };
+    }
+
+    const labeled = labeledAdContainer(target);
+    if (labeled) {
+      const hasCopy = (labeled.innerText || "").trim().length >= 40;
+      return { element: labeled, kind: hasCopy ? "text" : "capture", isAd: true };
+    }
+
+    const block = smallestTextBlock(target);
+    if (block) return { element: block, kind: "text", isAd: false };
+
+    return null;
+  }
 
   function smallestTextBlock(element) {
     // Walk up from the hovered node until there's enough text to classify.
@@ -744,8 +780,22 @@
   function stopPicking() {
     picking = false;
     pickTarget = null;
+    clearPickDwell();
     highlight.hidden = true;
+    highlight.classList.remove("ai-highlight-ad");
     pickHint.hidden = true;
+  }
+
+  // The outline waits for the same dwell as the pill: while the cursor is
+  // travelling, boxes flashing around every block it crosses is noise. Rest
+  // on a block for DWELL_MS and it lights up; move on and the countdown
+  // restarts for the new block.
+  let pickDwellTimer = null;
+  let pickDwellElement = null;
+
+  function clearPickDwell() {
+    clearTimeout(pickDwellTimer);
+    pickDwellElement = null;
   }
 
   document.addEventListener(
@@ -753,22 +803,32 @@
     (event) => {
       if (!picking || host.contains(event.target)) return;
 
-      const target = smallestTextBlock(event.target);
+      const candidate = pickCandidate(event.target);
+      const element = candidate && candidate.element;
 
-      if (!target) {
-        highlight.hidden = true;
-        pickTarget = null;
-        return;
-      }
+      if (element === pickDwellElement) return; // still resting on the same block
 
-      pickTarget = target;
+      clearPickDwell();
+      highlight.hidden = true;
+      pickTarget = null;
 
-      const rect = target.getBoundingClientRect();
-      highlight.hidden = false;
-      highlight.style.left = `${rect.left}px`;
-      highlight.style.top = `${rect.top}px`;
-      highlight.style.width = `${rect.width}px`;
-      highlight.style.height = `${rect.height}px`;
+      if (!element) return;
+
+      pickDwellElement = element;
+
+      pickDwellTimer = setTimeout(() => {
+        pickTarget = candidate;
+
+        const rect = element.getBoundingClientRect();
+        highlight.hidden = false;
+        // Detected ads get the amber "this is an ad" treatment; ordinary
+        // blocks the neutral one.
+        highlight.classList.toggle("ai-highlight-ad", candidate.isAd);
+        highlight.style.left = `${rect.left}px`;
+        highlight.style.top = `${rect.top}px`;
+        highlight.style.width = `${rect.width}px`;
+        highlight.style.height = `${rect.height}px`;
+      }, DWELL_MS);
     },
     true
   );
@@ -783,11 +843,17 @@
       event.preventDefault();
       event.stopPropagation();
 
-      const target = pickTarget || smallestTextBlock(event.target);
+      const picked = pickTarget || pickCandidate(event.target);
 
       stopPicking();
 
-      if (target) analyze({ text: (target.innerText || "").trim() });
+      if (!picked) return;
+
+      if (picked.kind === "capture") {
+        runCapture(picked.element.getBoundingClientRect());
+      } else {
+        analyze({ text: (picked.element.innerText || "").trim() });
+      }
     },
     true
   );

@@ -1000,10 +1000,12 @@ describe("pick mode", () => {
     setRect(prose, { left: 40, top: 90, width: 500, height: 110 });
 
     mouse(env.window, prose, "mousemove");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     const highlight = env.shadow.querySelector(".ai-highlight");
     assert.equal(highlight.hidden, false);
+    assert.equal(highlight.classList.contains("ai-highlight-ad"), false,
+      "plain text wrongly tagged as ad");
     assert.equal(highlight.style.left, "40px");
     assert.equal(highlight.style.width, "500px");
   });
@@ -1016,7 +1018,7 @@ describe("pick mode", () => {
     setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
 
     mouse(env.window, ad, "mousemove");
-    await tick(env.window);
+    await tick(env.window, 520);
 
     const clickEvent = new env.window.MouseEvent("click", {
       bubbles: true,
@@ -1028,6 +1030,57 @@ describe("pick mode", () => {
     assert.equal(clickEvent.defaultPrevented, true, "ad link would have opened");
     assert.equal(env.sent[0].type, "analyzeText");
     assert.match(env.sent[0].text, /FINAL HOURS/);
+  });
+
+  it("snaps the outline to a metadata-detected ad and tags it", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const ad = env.document.getElementById("ad");
+    setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+    const copy = ad.querySelector(".copy");
+    setRect(copy, { left: 120, top: 300, width: 460, height: 60 });
+
+    // Hover the inner paragraph; the outline must snap to the ad's own
+    // boundary, not the paragraph's.
+    mouse(env.window, copy, "mousemove");
+    await tick(env.window, 520);
+
+    const highlight = env.shadow.querySelector(".ai-highlight");
+    assert.equal(highlight.hidden, false);
+    assert.equal(highlight.style.width, "500px", "did not snap to the ad box");
+    assert.ok(highlight.classList.contains("ai-highlight-ad"), "missing ad tag");
+  });
+
+  it("picks an iframe ad and routes it to capture", async () => {
+    const env = createEnvironment({
+      hoverEnabled: false,
+      respond: (m) => {
+        if (m.type === "captureRegion") return { ok: true, captured: true };
+        return { ok: true, data: analysisFixture({ source: { mode: "image",
+          ocr: { confidence: 0.9, line_count: 1, repaired: false } } }) };
+      },
+    });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const iframe = env.document.createElement("iframe");
+    iframe.src = "https://safeframe.googlesyndication.com/x";
+    env.document.body.append(iframe);
+    setRect(iframe, { left: 150, top: 120, width: 728, height: 90 });
+
+    mouse(env.window, iframe, "mousemove");
+    await tick(env.window, 520);
+
+    assert.ok(
+      env.shadow.querySelector(".ai-highlight").classList.contains("ai-highlight-ad")
+    );
+
+    mouse(env.window, iframe, "click");
+    await tick(env.window, 300);
+
+    const cap = env.sent.find((m) => m.type === "captureRegion");
+    assert.ok(cap, "iframe pick did not capture");
+    assert.equal(cap.region.width, 728);
   });
 
   it("cancels on Escape without analyzing", async () => {
@@ -1050,7 +1103,7 @@ describe("pick mode", () => {
     setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
 
     mouse(env.window, ad, "mousemove");
-    await tick(env.window);
+    await tick(env.window, 520);
     mouse(env.window, ad, "click");
     await tick(env.window, 60);
 
