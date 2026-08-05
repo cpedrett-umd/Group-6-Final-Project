@@ -1,7 +1,7 @@
 ---
 team: Persuasive Ad Explainer
 week: 6
-date: <2026-07-08>
+date: 2026-07-08
 members:
   - name: Ciara Cameron
     github: Ciaracam
