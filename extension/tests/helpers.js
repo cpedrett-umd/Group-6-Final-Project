@@ -65,7 +65,7 @@ export function setRect(element, rect) {
  * `respond` receives the message content.js sends and returns the fake API
  * reply, standing in for background.js.
  */
-export function createEnvironment({ html = PAGE_HTML, respond } = {}) {
+export function createEnvironment({ html = PAGE_HTML, respond, hoverEnabled = true } = {}) {
   const dom = new JSDOM(html, {
     runScripts: "outside-only",
     pretendToBeVisual: true,
@@ -86,6 +86,8 @@ export function createEnvironment({ html = PAGE_HTML, respond } = {}) {
 
   const sent = [];
   const messageListeners = [];
+  const storageListeners = [];
+  const storageState = { hoverEnabled };
 
   window.chrome = {
     runtime: {
@@ -100,9 +102,28 @@ export function createEnvironment({ html = PAGE_HTML, respond } = {}) {
           : { ok: true, data: analysisFixture() };
       },
     },
+    storage: {
+      sync: {
+        get: async (defaults) => ({ ...defaults, ...storageState }),
+        set: async (values) => Object.assign(storageState, values),
+      },
+      onChanged: {
+        addListener: (fn) => storageListeners.push(fn),
+      },
+    },
   };
 
   window.eval(readSource("content.js"));
+
+  // The content script arms itself from chrome.storage asynchronously; tests
+  // dispatch events synchronously right after injection, which would race the
+  // microtask. Deliver the armed state through the onChanged path instead,
+  // which registers synchronously during injection.
+  if (hoverEnabled) {
+    storageListeners.forEach((fn) =>
+      fn({ hoverEnabled: { newValue: true } }, "sync")
+    );
+  }
 
   const host = window.document.getElementById("adinsight-root");
 
@@ -116,6 +137,11 @@ export function createEnvironment({ html = PAGE_HTML, respond } = {}) {
     /** Deliver a message as background.js would. */
     dispatchRuntimeMessage: (message) =>
       messageListeners.forEach((fn) => fn(message)),
+    /** Flip the popup's hover toggle, as chrome.storage.onChanged reports it. */
+    setHoverEnabled: (value) =>
+      storageListeners.forEach((fn) =>
+        fn({ hoverEnabled: { newValue: value } }, "sync")
+      ),
   };
 }
 

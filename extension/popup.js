@@ -79,6 +79,22 @@ textArea.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key === "Enter") goButton.click();
 });
 
+/* ── Hover detection toggle ───────────────────────────────────── */
+
+/* Off by default: the extension does nothing on its own while someone is just
+ * reading. The toggle arms hover detection everywhere; content scripts pick
+ * the change up live through chrome.storage.onChanged — no reload needed. */
+
+const hoverToggle = document.getElementById("hover-toggle");
+
+chrome.storage.sync.get({ hoverEnabled: false }).then((stored) => {
+  hoverToggle.checked = stored.hoverEnabled;
+});
+
+hoverToggle.addEventListener("change", () => {
+  chrome.storage.sync.set({ hoverEnabled: hoverToggle.checked });
+});
+
 /* ── Pick an ad on the page ───────────────────────────────────── */
 
 document.getElementById("pick").addEventListener("click", async () => {

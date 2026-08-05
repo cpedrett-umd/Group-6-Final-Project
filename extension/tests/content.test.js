@@ -65,6 +65,73 @@ describe("injection", () => {
   });
 });
 
+describe("passive by default", () => {
+  // The extension must not act on its own: no pills, no sensors, no selection
+  // offers until the popup's Hover detection toggle arms them. Explicit
+  // actions (pick mode, context menus) work regardless.
+
+  it("offers nothing on hover until armed", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    const { ad, pill } = (() => {
+      const ad = env.document.getElementById("ad");
+      setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+      return { ad, pill: env.shadow.querySelector(".ai-pill") };
+    })();
+
+    mouse(env.window, ad, "mouseover");
+    await tick(env.window, 520);
+
+    assert.equal(pill.hidden, true, "pill appeared while disarmed");
+  });
+
+  it("lays no sensors while disarmed", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    const iframe = env.document.createElement("iframe");
+    iframe.src = "https://safeframe.googlesyndication.com/ad";
+    env.document.body.append(iframe);
+    setRect(iframe, { left: 200, top: 150, width: 728, height: 90 });
+
+    env.window.dispatchEvent(new env.window.Event("resize"));
+    await tick(env.window);
+
+    assert.equal(env.shadow.querySelector(".ai-sensor:not([hidden])"), null);
+  });
+
+  it("pick mode still works while disarmed", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+    await tick(env.window);
+
+    assert.equal(env.shadow.querySelector(".ai-pick-hint").hidden, false);
+  });
+
+  it("the popup toggle arms hover live, no reload needed", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    const ad = env.document.getElementById("ad");
+    setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+
+    env.setHoverEnabled(true);
+    mouse(env.window, ad, "mouseover");
+    await tick(env.window, 520);
+
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, false);
+  });
+
+  it("disarming hides the pill immediately", async () => {
+    const env = createEnvironment(); // armed
+    const ad = env.document.getElementById("ad");
+    setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+
+    mouse(env.window, ad, "mouseover");
+    await tick(env.window, 520);
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, false);
+
+    env.setHoverEnabled(false);
+    await tick(env.window);
+    assert.equal(env.shadow.querySelector(".ai-pill").hidden, true);
+  });
+});
+
 describe("ad detection", () => {
   it("offers the pill when hovering a sponsored block", async () => {
     const env = createEnvironment();

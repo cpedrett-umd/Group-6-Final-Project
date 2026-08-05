@@ -41,6 +41,14 @@
   }
   button.go:hover { background: var(--teal-dark); }
   button.go:disabled { background: #9dbcc7; cursor: not-allowed; }
+  .switch-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 12px; margin-bottom: 12px;
+    border: 1px solid var(--line); border-radius: 9px; cursor: pointer;
+  }
+  .switch-row small { color: var(--muted); line-height: 1.45; display: block; margin-top: 2px; }
+  .switch-row input { width: 34px; height: 18px; accent-color: var(--teal); flex: none; cursor: pointer; }
+
   button.pick { margin-top: 0; background: var(--ink); }
   button.pick:hover { background: #0b222b; }
   .pick-note { margin: 6px 0 16px; color: var(--muted); font-size: 12.5px; text-align: center; }
@@ -68,6 +76,15 @@
 <p class="tagline">Understand the persuasion behind every ad.</p>
 
 <div class="status" id="status"><span class="dot"></span><span id="status-text">Checking server…</span></div>
+
+<label class="switch-row">
+  <span>
+    <strong>Hover detection</strong><br>
+    <small>Show an <em>Analyze</em> button when you rest on an ad. Off, the
+    extension does nothing until you use this popup or the right-click menu.</small>
+  </span>
+  <input type="checkbox" id="hover-toggle">
+</label>
 
 <button class="go pick" id="pick" type="button">Pick an ad on this page</button>
 <p class="pick-note">Then hover any ad and click it.</p>

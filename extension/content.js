@@ -441,9 +441,50 @@
     dwellElement = null;
   }
 
+  /* ── Passive by default ─────────────────────────────────────── */
+
+  /* The extension must not act on its own while someone is just reading.
+   * Hover detection (pills, sensors, selection offers) is armed by the
+   * "Hover detection" toggle in the popup and stays off otherwise. Explicit
+   * actions — pick mode, the paste box, the right-click menu — always work.
+   */
+
+  let hoverEnabled = false;
+
+  function setHoverEnabled(value) {
+    hoverEnabled = !!value;
+
+    if (!hoverEnabled) {
+      cancelDwell();
+      hidePill();
+    }
+
+    // Sensors follow the toggle: created/shown when armed, hidden when not.
+    syncSensors();
+  }
+
+  if (chrome.storage && chrome.storage.sync) {
+    // A toggle flip can land before the initial read resolves; the stale read
+    // must not clobber the user's explicit choice.
+    let sawExplicitChange = false;
+
+    chrome.storage.sync.get({ hoverEnabled: false }).then((stored) => {
+      if (!sawExplicitChange) setHoverEnabled(stored.hoverEnabled);
+    });
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "sync" && changes.hoverEnabled) {
+        sawExplicitChange = true;
+        setHoverEnabled(changes.hoverEnabled.newValue);
+      }
+    });
+  }
+
   document.addEventListener(
     "mouseover",
     (event) => {
+      if (!hoverEnabled) return;
+
       const target = event.target;
       if (!target || typeof target.closest !== "function") return;
       if (host.contains(target)) return;
@@ -506,7 +547,7 @@
       // never delivers one.)
       const entering = event.relatedTarget;
 
-      if (entering && !host.contains(entering)) {
+      if (hoverEnabled && entering && !host.contains(entering)) {
         const capturable = captureCandidate(entering);
 
         if (capturable) {
@@ -536,6 +577,13 @@
   const sensors = new Map(); // ad element -> sensor div
 
   function syncSensors() {
+    if (!hoverEnabled) {
+      sensors.forEach((sensor) => {
+        sensor.hidden = true;
+      });
+      return;
+    }
+
     const frames = document.querySelectorAll("iframe, video");
     const wanted = new Set();
 
@@ -616,6 +664,7 @@
   /* ── Trigger 2: selecting text ──────────────────────────────── */
 
   document.addEventListener("mouseup", (event) => {
+    if (!hoverEnabled) return;
     if (host.contains(event.target)) return;
 
     // Let the selection settle before reading it.
