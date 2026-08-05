@@ -263,6 +263,8 @@
     const payload = pillPayload;
     hidePill();
 
+    if (picking) stopPicking();
+
     if (!payload) return;
 
     if (payload.captureElement) {
@@ -784,6 +786,7 @@
     highlight.hidden = true;
     highlight.classList.remove("ai-highlight-ad");
     pickHint.hidden = true;
+    hidePill();
   }
 
   // The outline waits for the same dwell as the pill: while the cursor is
@@ -810,6 +813,7 @@
 
       clearPickDwell();
       highlight.hidden = true;
+      hidePill();
       pickTarget = null;
 
       if (!element) return;
@@ -828,6 +832,16 @@
         highlight.style.top = `${rect.top}px`;
         highlight.style.width = `${rect.width}px`;
         highlight.style.height = `${rect.height}px`;
+
+        // The box shows WHAT was found; the button says what to do about it.
+        // Clicking either the pill or the box analyzes.
+        showPill(
+          rect,
+          candidate.kind === "capture"
+            ? { captureElement: element }
+            : { text: (element.innerText || "").trim() },
+          candidate.isAd ? "Analyze this ad" : "Analyze this text"
+        );
       }, DWELL_MS);
     },
     true

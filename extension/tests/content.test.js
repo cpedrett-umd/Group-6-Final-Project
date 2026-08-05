@@ -1032,6 +1032,27 @@ describe("pick mode", () => {
     assert.match(env.sent[0].text, /FINAL HOURS/);
   });
 
+  it("shows the Analyze button with the box, and its click ends picking", async () => {
+    const env = createEnvironment({ hoverEnabled: false });
+    env.dispatchRuntimeMessage({ type: "startPicking" });
+
+    const ad = env.document.getElementById("ad");
+    setRect(ad, { left: 100, top: 200, width: 500, height: 300 });
+
+    mouse(env.window, ad, "mousemove");
+    await tick(env.window, 520);
+
+    const pill = env.shadow.querySelector(".ai-pill");
+    assert.equal(pill.hidden, false, "no button with the pick box");
+    assert.equal(pill.querySelector("span").textContent, "Analyze this ad");
+
+    pill.click();
+    await tick(env.window, 100);
+
+    assert.equal(env.shadow.querySelector(".ai-pick-hint").hidden, true, "picking did not end");
+    assert.ok(env.sent.some((m) => m.type === "analyzeText"));
+  });
+
   it("snaps the outline to a metadata-detected ad and tags it", async () => {
     const env = createEnvironment({ hoverEnabled: false });
     env.dispatchRuntimeMessage({ type: "startPicking" });
