@@ -1,5 +1,5 @@
 ---
-team: <your-company-name>
+team: Persuasive Ad Explainer
 week: 6
 date: <2026-07-08>
 members:
@@ -9,9 +9,13 @@ members:
   - name: Chris Pedretti
     github: cpedrett-umd
     hat: Engineering | Data&Eval
-  - name: <name>
-    github: <handle>
+  - name: Shashank Ashoka
+    github: shashk09-coder
+    hat: Architecture | OCR | Agents
+  - name: Jonathan Kim
+    github: jonathanjkim5108
     hat: Product | Engineering | Data&Eval
+    
 north_star:
   metric: <e.g. task success rate>
   value: <this week>
