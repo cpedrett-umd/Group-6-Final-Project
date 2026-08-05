@@ -42,7 +42,26 @@ The evidence users want already exists publicly. Both groups are performing the 
 
 ## Metrics snapshot
 
-No metrics to report yet
+<table>
+  <tr>
+    <td width="34%" valign="top">
+      <img
+        src="https://github.com/user-attachments/assets/77dd3c42-1ea1-4ab1-974a-329378b418cb"
+        alt="Metrics overview"
+        width="100%"
+      />
+    </td>
+    <td width="66%" valign="top">
+      <img
+        src="https://github.com/user-attachments/assets/c9e506ca-d79d-4474-a584-ce7952255cbb"
+        alt="Metrics details"
+        width="100%"
+      />
+    </td>
+  </tr>
+</table>
+
+
 
 ## Challenges / blockers
 
