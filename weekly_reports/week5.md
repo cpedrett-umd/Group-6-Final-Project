@@ -1,7 +1,7 @@
 ---
 team: AdInsight — Persuasion-Aware Ad Explainer
-week: 4
-date: 6-24-2026
+week: 5
+date: 7-1-2026
 members:
   - name: Chris Pedretti
     github: cpedrett-umd
