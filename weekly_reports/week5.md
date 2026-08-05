@@ -81,7 +81,7 @@ present in the reference survived transcription. Lost: none.
 
   -Because the classifier and the trigger-phrase matcher both depend on this
 vocabulary, a headline accuracy figure materially overstates how usable the audio
-path is. The errors are not randomly distributed — they concentrate in exactly
+path is. The errors are not randomly distributed  they concentrate in exactly
 the signal the system needs.
 
 ## Next week's goal
