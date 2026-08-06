@@ -30,7 +30,7 @@ north_star:
 - Today, users usually deal with suspicious or persuasive ads in a manual and inconsistent way. Some users ignore the ad if it feels suspicious, while others click through and try to judge the product after seeing the landing page. They may Google the product or company, check Amazon reviews, search Reddit threads, read comments under the ad, ask friends or family members, or report the ad to the platform.
 
 ## Metrics snapshot
-- No metrics to report yet.
+- persuasion trigger density was 0.17 phrases per 100 words against 1.81 in the written corpus (9% of the signal), with 34 of 41 transcripts containing no trigger phrase at all, and 68% exceeding the classifier's 128-subword window at a mean of 167.
 
 ## Challenges / blockers
 - Our initial dataset did not accurately reflect all of our persuasion labels. The dataset was heavily skewed toward urgency and scarcity language, while categories such as FOMO, social proof, authority, and fear appeal were less represented. We also realized that cleaning and labeling the dataset required more manual review than expected due to noisy OCR text, near-duplicate ads, and inconsistent advertisement quality.
@@ -45,6 +45,7 @@ north_star:
 - Ciara (Data&Eval) : labeled an initial subset of ads, and developed a data-cleaning script to reduce noisy OCR text and near-duplicate entries.
 - Chris (Engineering | Data&Eval): Explored ASR pipeline for audio to text transcription for increasing modalities, drafted initial nlp model architecture in PyTorch. We are exploring a tokenizer to process textual data and a multi head self attention transformer to handle the classification task. See modeling for more info.
 - Jonathan (Data&Eval) : Developed data collection pipeline and associated script to obtain raw OCR and HuggingFace text, developed intermediate data labeling scripts
+- Shashank (Architecture | OCR | Agents): Assembled an independent evaluation set of 41 video ads from Instagram and YouTube and built a yt-dlp  faster-whisper pipeline to generate aligned video text pairs, then evaluated the output as classifier input rather than as transcription in isolation.As a forward path I proposed burst-frame capture  sampling multiple frames per ad and merging deduplicated OCR  so video ads re-enter through the image pipeline we already trust.
 
 ## Lean canvas changes (if any)
 - Shifted away from OCR and ASR and decided to focus on purely textual ad data.
