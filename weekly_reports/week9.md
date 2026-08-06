@@ -1,7 +1,7 @@
 ---
 team: AdInsight
 week: 9
-date: 2026-07-22
+date: 2026-07-29
 members:
   - name: Ciara Cameron
     github: Ciaracam
