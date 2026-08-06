@@ -24,6 +24,7 @@ north_star:
 
 ## Shipped this week
 - Drafted an architecture of the tranformer workflow using PyTorch. This includes a data loader, tokenizer, and the model. The data loader is responsible for taking a labeled dataset and performing text cleaning, word tokenizing, and building vocab. The model will use multi head self attention with an encoder block and classifier. We also plan to use supporting scripts for label parsing and classifying a single ad from a model checkpoint.
+- Collected approximately 50 Instagram advertisements and used the ad_asr_pipeline_fixed.ipynb pipeline to download their audio and convert the spoken content into transcripts using faster-whisper. These transcripts were prepared as inputs for testing how well text embeddings capture the semantic and persuasive content relevant to our use case.
 
 ## User / validation learning
 - Today, users usually deal with suspicious or persuasive ads in a manual and inconsistent way. Some users ignore the ad if it feels suspicious, while others click through and try to judge the product after seeing the landing page. They may Google the product or company, check Amazon reviews, search Reddit threads, read comments under the ad, ask friends or family members, or report the ad to the platform.
