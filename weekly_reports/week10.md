@@ -12,6 +12,9 @@ members:
   - name: Jonathan Kim
     github: jonathanjkim5108
     hat: Product | Engineering | Data&Eval
+  - name: Shashank Ashoka
+    github: shashk09-coder
+    hat: Architecture | OCR | Agents
 north_star:
   metric: F1 Macro score across class labels
   value: 89.6% (held-out test)
