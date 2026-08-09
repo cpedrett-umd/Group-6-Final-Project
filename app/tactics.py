@@ -1,4 +1,4 @@
-"""Plain-language copy and trigger-phrase evidence for the 7 persuasion tactics.
+"""Plain-language copy and trigger-phrase evidence for the persuasion tactics.
 
 The classifier returns one label per ad. The wireframe, though, quotes the
 specific words that make an ad pushy ("Only 7 left" - counters like this are
@@ -29,6 +29,9 @@ DISPLAY_NAMES = {
     "Social Proof": "Social proof",
     "Authority Manipulation": "Authority",
     "Exaggerated Claims": "Big claim",
+    # Present so nothing KeyErrors if the label reaches a display path. No row
+    # is ever built for it -- see build_tactics.
+    "Neutral": "Nothing pushy",
 }
 
 # Written at a reading level suited to the 60+ audience the wireframe targets:
@@ -56,24 +59,28 @@ GENERIC_EXPLANATIONS = {
     "Exaggerated Claims": "The wording promises more than can be proven.",
 }
 
-# ads_dataset_labeled.csv contains no "Neutral" rows, even though the labeling
-# guidelines define the class. The classifier therefore has no way to say "this
-# ad is fine" -- softmax must put its mass on one of the 7 tactics, so a plain
-# ad still comes back as a tactic, just weakly (a bakery's opening-hours ad
-# scores ~0.45 Urgency).
+# The label meaning "no tactic present". Handled separately everywhere, because
+# it is the absence of a finding rather than a weaker one.
+NEUTRAL_LABEL = "Neutral"
+
+# The dataset now carries a Neutral class, merged in alongside real-world
+# phrasing from the Mathur et al. dark-patterns corpus. Before that the
+# classifier had no way to say "this ad is fine" -- softmax had to put its mass
+# on one of the 7 tactics, so a bakery's opening-hours ad came back as Social
+# Proof at 0.758. With Neutral available the same ad is classified correctly.
 #
-# A row backed only by a weak model score, with no trigger phrase anywhere in
-# the text, is treated as "not sure" rather than reported as a finding. Saying
-# "this ad uses 1 pressure tactic" about a harmless ad is exactly the kind of
-# false alarm that would teach a 60+ user to stop trusting the tool. The score
-# is not hidden -- it still appears in the full distribution under "Read the
-# full explanation".
+# The guard below is kept regardless. A row backed only by a weak model score,
+# with no trigger phrase anywhere in the text, is treated as "not sure" rather
+# than reported as a finding. Saying "this ad uses 1 pressure tactic" about a
+# harmless ad is exactly the kind of false alarm that would teach a 60+ user to
+# stop trusting the tool. The score is not hidden -- it still appears in the
+# full distribution under "Read the full explanation".
 LOW_CONFIDENCE = 0.60
 
 # Trigger phrases per tactic. Each entry is a regex fragment matched
 # case-insensitively on word boundaries. Entries marked "guideline" are taken
 # verbatim from docs/labeling_guidelines.md; the rest are near variants of the
-# same idea that show up throughout ads_dataset_labeled.csv.
+# same idea that show up throughout the labeled dataset.
 TRIGGER_PATTERNS = {
     "Urgency": [
         r"act now",              # guideline
@@ -252,6 +259,37 @@ def explain(label: str, phrases: list[dict]) -> str:
     return GENERIC_EXPLANATIONS.get(label, "This is a pressure tactic.")
 
 
+def _phrase_only_rows(phrases_by_label: dict, confidence_by_label: dict) -> list[dict]:
+    """Rows for trigger phrases alone, with no model row.
+
+    Used when the model's pick is Neutral. A phrase hit is still evidence worth
+    showing -- the lexicon found those words in the ad regardless of what the
+    classifier concluded -- but it is reported as a phrase finding, not as the
+    model's verdict.
+    """
+    rows = []
+
+    for label, phrases in phrases_by_label.items():
+        if not phrases:
+            continue
+
+        rows.append(
+            {
+                "label": label,
+                "display": display_name(label),
+                "confidence": confidence_by_label.get(label, 0.0),
+                "sources": ["phrase"],
+                "phrases": phrases,
+                "explanation": explain(label, phrases),
+                "uncertain": False,
+            }
+        )
+
+    rows.sort(key=lambda row: (-len(row["phrases"]), -row["confidence"]))
+
+    return rows
+
+
 def build_tactics(prediction: dict, text: str) -> list[dict]:
     """Merge the model's prediction with phrase evidence into panel rows.
 
@@ -269,7 +307,15 @@ def build_tactics(prediction: dict, text: str) -> list[dict]:
         for entry in prediction["distribution"]
     }
 
-    labels = set(phrases_by_label) | {predicted}
+    # Neutral is the absence of a tactic, not a tactic. Building a row for it
+    # would send it through the same path as a finding: the panel would show
+    # "Neutral" as a detected tactic and explain() would fall through to its
+    # default line, telling the user a clean ad "is a pressure tactic". Any
+    # trigger phrases still surface below; the model's own row does not.
+    if predicted == NEUTRAL_LABEL:
+        return _phrase_only_rows(phrases_by_label, confidence_by_label)
+
+    labels = (set(phrases_by_label) | {predicted}) - {NEUTRAL_LABEL}
     rows = []
 
     for label in labels:

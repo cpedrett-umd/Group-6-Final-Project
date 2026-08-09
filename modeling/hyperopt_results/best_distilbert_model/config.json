@@ -15,9 +15,10 @@
     "1": "Exaggerated Claims",
     "2": "FOMO",
     "3": "Fear Appeals",
-    "4": "Scarcity",
-    "5": "Social Proof",
-    "6": "Urgency"
+    "4": "Neutral",
+    "5": "Scarcity",
+    "6": "Social Proof",
+    "7": "Urgency"
   },
   "initializer_range": 0.02,
   "label2id": {
@@ -25,9 +26,10 @@
     "Exaggerated Claims": 1,
     "FOMO": 2,
     "Fear Appeals": 3,
-    "Scarcity": 4,
-    "Social Proof": 5,
-    "Urgency": 6
+    "Neutral": 4,
+    "Scarcity": 5,
+    "Social Proof": 6,
+    "Urgency": 7
   },
   "max_position_embeddings": 512,
   "model_type": "distilbert",

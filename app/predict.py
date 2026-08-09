@@ -1,10 +1,9 @@
 """Inference wrapper around the hyperopt-tuned DistilBERT classifier.
 
-Loads the weights written by `modeling/train_best.py` (the winning trial:
-lr 5e-5, batch 16, 3 epochs, weight decay 0.0) and turns raw ad text into a
-label plus a confidence over all 7 tactic classes.
+Loads the weights written by `modeling/train_best.py` and turns raw ad text
+into a label plus a confidence over all tactic classes.
 
-Two details keep this faithful to training:
+Three details keep this faithful to training:
 
 * The tokenizer comes from `datasets/text_processing/ads_tokenizer/` -- the
   exact vocab that produced `tokenized_ads.pt` -- and uses the same
@@ -12,6 +11,10 @@ Two details keep this faithful to training:
 * The label names come from the checkpoint's own `id2label`, written by
   `AutoModelForSequenceClassification` at save time. Nothing here hardcodes
   class order, so re-training on a changed dataset cannot desynchronise the UI.
+* Text longer than the window is scored in overlapping chunks rather than
+  truncated. Every training example fit inside 128 subwords (99th percentile:
+  61), so widening the window would hand the model a shape it has never been
+  trained on. Chunking keeps each pass inside the distribution it learned.
 """
 from __future__ import annotations
 
@@ -28,6 +31,14 @@ TOKENIZER_DIRECTORY = REPO_ROOT / "datasets" / "text_processing" / "ads_tokenize
 
 # Must match hf_tokenizer.DEFAULT_MAX_LEN, which built the training tensors.
 MAX_LEN = 128
+
+# Content tokens per window, leaving room for [CLS] and [SEP].
+WINDOW = MAX_LEN - 2
+
+# Overlap between consecutive windows. A tactic phrase split across a boundary
+# would be missed by both windows otherwise; 32 tokens is comfortably longer
+# than any trigger phrase in the lexicon.
+STRIDE = WINDOW - 32
 
 _lock = threading.Lock()
 _state = {}
@@ -104,11 +115,85 @@ def warm_up() -> None:
     _load()
 
 
+def _windows(token_ids):
+    """Split content token ids into overlapping windows.
+
+    Returns a list of id lists, each at most WINDOW long. A short input yields
+    exactly one window, so the common case costs nothing extra.
+    """
+    if len(token_ids) <= WINDOW:
+        return [token_ids]
+
+    chunks = []
+    start = 0
+
+    while start < len(token_ids):
+        chunks.append(token_ids[start:start + WINDOW])
+
+        if start + WINDOW >= len(token_ids):
+            break
+
+        start += STRIDE
+
+    return chunks
+
+
+def _score_windows(state, token_ids):
+    """Run every window and pool the per-class probabilities.
+
+    Pooling is per-class **maximum**, not mean. A tactic that appears only in
+    the closing seconds of a long ad is still present in that ad; averaging
+    would dilute it away. The consequence is that pooled scores no longer sum
+    to 1 when there is more than one window -- they are per-class evidence,
+    not a distribution -- so they are renormalised before being reported, and
+    `windows` is returned so the caller can say how the number was reached.
+    """
+    tokenizer = state["tokenizer"]
+    model = state["model"]
+
+    cls_id = tokenizer.cls_token_id
+    sep_id = tokenizer.sep_token_id
+    pad_id = tokenizer.pad_token_id
+
+    chunks = _windows(token_ids)
+
+    pooled = None
+
+    for chunk in chunks:
+        ids = [cls_id] + chunk + [sep_id]
+        attention = [1] * len(ids)
+
+        padding = MAX_LEN - len(ids)
+
+        if padding > 0:
+            ids = ids + [pad_id] * padding
+            attention = attention + [0] * padding
+
+        input_ids = torch.tensor([ids], dtype=torch.long)
+        attention_mask = torch.tensor([attention], dtype=torch.long)
+
+        with torch.no_grad():
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+            )
+
+        probabilities = F.softmax(outputs.logits, dim=1)[0]
+
+        pooled = (
+            probabilities
+            if pooled is None
+            else torch.maximum(pooled, probabilities)
+        )
+
+    return pooled, len(chunks)
+
+
 def predict(text: str) -> dict:
     """Classify one ad.
 
-    Returns the argmax label, its softmax confidence, and the full distribution
-    sorted high to low. The distribution is what lets the panel rank secondary
+    Returns the argmax label, its confidence, and the full distribution sorted
+    high to low. The distribution is what lets the panel rank secondary
     tactics rather than showing a bare top-1.
     """
     if not text or not text.strip():
@@ -117,42 +202,41 @@ def predict(text: str) -> dict:
     state = _load()
 
     tokenizer = state["tokenizer"]
-    model = state["model"]
     id_to_label = state["id_to_label"]
 
-    encoded = tokenizer(
-        [text],
-        padding="max_length",
-        truncation=True,
-        max_length=MAX_LEN,
-        return_tensors="pt",
-    )
+    # No truncation here: the full input is windowed below rather than cut off.
+    token_ids = tokenizer(
+        text,
+        add_special_tokens=False,
+        truncation=False,
+    )["input_ids"]
 
-    with torch.no_grad():
-        outputs = model(
-            input_ids=encoded["input_ids"],
-            attention_mask=encoded["attention_mask"],
-        )
+    pooled, window_count = _score_windows(state, token_ids)
 
-    probabilities = F.softmax(outputs.logits, dim=1)[0]
+    # Max-pooling across windows breaks the sum-to-one property, so restore it
+    # before reporting. With a single window this is a no-op.
+    pooled = pooled / pooled.sum()
 
     distribution = [
         {
             "label": id_to_label[index],
             "confidence": round(float(probability), 4),
         }
-        for index, probability in enumerate(probabilities.tolist())
+        for index, probability in enumerate(pooled.tolist())
     ]
 
     distribution.sort(key=lambda entry: -entry["confidence"])
 
-    # Truncation is worth surfacing: an ad longer than 128 subwords was only
-    # partly seen by the model.
-    token_count = int(encoded["attention_mask"][0].sum())
+    # An input longer than the window used to be silently cut off. It is now
+    # scored in full, but the flag is kept: the UI still wants to say the ad
+    # was long, and the test suite asserts it.
+    exceeded_window = len(token_ids) + 2 > MAX_LEN
 
     return {
         "label": distribution[0]["label"],
         "confidence": distribution[0]["confidence"],
         "distribution": distribution,
-        "truncated": token_count >= MAX_LEN,
+        "truncated": exceeded_window,
+        "windows": window_count,
+        "token_count": len(token_ids) + 2,
     }
