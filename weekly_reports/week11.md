@@ -33,7 +33,7 @@ north_star:
   scored on the same six ads. VLM recovery 89% against 64% for the project's
   current OCR path. Requested by the instructor before we committed to the
   approach; approved on condition the prompt stays transcription-only.
-  → [`vlm_extraction.ipynb`](../vlm_extraction.ipynb)
+  → [`vlm_extraction.ipynb`](../modeling/vlm_extraction.ipynb)
 - **Claim and query extraction for the review layer.** A second VLM call returns
   the brand, the promise the ad makes, and the search a cautious buyer would
   type. It returns NONE when no product is named rather than inventing a generic

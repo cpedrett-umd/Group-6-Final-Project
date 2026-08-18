@@ -151,7 +151,7 @@ and [`ads_dataset_merged.csv`](../datasets/text_processing/ads_dataset_merged.cs
   Fear Appeals at 99%, and a phrase containing "bottleneck" as Scarcity at 97%.
   Every sentence is far outside the retail ad copy the model was fine-tuned on,
   so it pattern-matches individual words with high confidence.
-  → [`sentence_attribution.ipynb`](../sentence_attribution.ipynb)
+  → [`sentence_attribution.ipynb`](../modeling/sentence_attribution.ipynb)
   <img width="800" alt="Per-sentence classification of a 588-word ad transcript, showing spurious tactic labels at high confidence" src="https://github.com/user-attachments/assets/989434c3-616d-46dc-8988-9a07d8ab8f4c" />
   
 **Figure 3.** Per-sentence classification of a 588-word supplement ad transcript
@@ -169,7 +169,7 @@ not filter these because the model is not uncertain it is wrong.
   against a 42.5% baseline, with everything else in a 2–6% band. At a
   20%-of-baseline threshold, zero driver sentences. The signal is diffuse, not
   localised.
-  → [`occlusion_attribution.ipynb`](../occlusion_attribution.ipynb)
+  → [`occlusion_attribution.ipynb`](../modeling/occlusion_attribution.ipynb)
 - The review-insight layer is still a stub. It renders behind a visible "sample
   data" badge so nothing invented is presented as real.
   → [`app/reviews.py`](../app/reviews.py)
