@@ -179,8 +179,8 @@
     $("#summary-headline").textContent = data.summary.headline;
     $("#summary-msg").textContent = data.summary.message;
 
-    // What OCR read back — only shown for image input, so a bad scan is
-    // visible to the user instead of silently driving the verdict.
+    // What the extractor read back — only shown for image input, so a bad scan
+    // is visible to the user instead of silently driving the verdict.
     const readBack = $("#read-back");
 
     if (data.source.mode === "image" && data.source.ocr) {
@@ -189,8 +189,13 @@
 
       const bits = [
         ocr.line_count + (ocr.line_count === 1 ? " line" : " lines") + " read",
-        percent(ocr.confidence) + " confident",
       ];
+
+      // The VLM backend reports no per-line score. Saying nothing is better
+      // than printing 0%, which would read as a bad scan.
+      if (ocr.confidence !== null && ocr.confidence !== undefined) {
+        bits.push(percent(ocr.confidence) + " confident");
+      }
 
       if (ocr.repaired) bits.push("spacing repaired");
 
@@ -202,8 +207,8 @@
     }
 
     // Tactic rows. `uncertain` rows are the model's forced pick on an ad with
-    // no trigger phrases — the label set has no "neutral" option, so a weak
-    // score is not a finding. It still shows in the distribution below.
+    // no trigger phrases — a weak score is not a finding. It still shows in the
+    // distribution below.
     const list = $("#tactic-list");
     list.replaceChildren();
 
@@ -256,14 +261,86 @@
       list.append(item);
     });
 
-    // Review layer (stub)
-    $("#review-notice").textContent = data.reviews.notice || "";
-    $("#review-badge").hidden = !data.reviews.mock;
+    // ── Review layer ──────────────────────────────────────────
+    //
+    // Three parts, in the order a reader needs them: what the technical words
+    // mean, what people report, and where to read it. The middle section is
+    // built only from retrieved passages — nothing here is the model's own
+    // opinion of the product.
+
+    const reviews = data.reviews || {};
+
+    $("#review-notice").textContent = reviews.notice || "";
+    $("#review-badge").hidden = !reviews.mock;
 
     const reviewList = $("#review-list");
     reviewList.replaceChildren();
 
-    data.reviews.items.forEach((review) => {
+    // 1. Glossary. An ad that leans on enzyme names is persuading with
+    // vocabulary, so plain definitions are the direct counter.
+    if (reviews.glossary && reviews.glossary.length) {
+      const item = document.createElement("li");
+      item.className = "review review-glossary";
+
+      const heading = document.createElement("span");
+      heading.className = "review-src";
+      heading.textContent = "What these words mean";
+      item.append(heading);
+
+      const terms = document.createElement("dl");
+      terms.className = "glossary";
+
+      reviews.glossary.forEach((entry) => {
+        const term = document.createElement("dt");
+        term.textContent = entry.term;
+
+        const meaning = document.createElement("dd");
+        meaning.textContent = entry.meaning;
+
+        terms.append(term, meaning);
+      });
+
+      item.append(terms);
+      reviewList.append(item);
+    }
+
+    // 2. What people report. Present only when retrieval found enough
+    // independent sources to summarise.
+    if (reviews.summary) {
+      const item = document.createElement("li");
+      item.className = "review review-summary";
+
+      const heading = document.createElement("span");
+      heading.className = "review-src";
+      heading.textContent = "What people are saying";
+
+      const text = document.createElement("p");
+      text.className = "review-quote";
+      text.textContent = reviews.summary;
+
+      item.append(heading, text);
+      reviewList.append(item);
+    }
+
+    // 3. Nothing to look up. Reporting that plainly is more use than a guess:
+    // for an ad promising a result, the missing name is itself the finding.
+    if (reviews.no_entity) {
+      const item = document.createElement("li");
+      item.className = "review review-empty";
+
+      const text = document.createElement("p");
+      text.className = "review-quote";
+      text.textContent =
+        "There is no company or product name in this ad to look up. " +
+        "For an ad promising a result, that is worth noticing on its own — " +
+        "a seller willing to be checked will normally say who they are.";
+
+      item.append(text);
+      reviewList.append(item);
+    }
+
+    // 4. The sources themselves.
+    (reviews.items || []).forEach((review) => {
       const item = document.createElement("li");
       item.className = "review";
 
@@ -273,11 +350,31 @@
         ? review.source + " · " + review.rating
         : review.source;
 
+      // Affiliate pages are kept rather than dropped — they are sometimes the
+      // most candid source available — but the reader is told.
+      if (review.flags && review.flags.length) {
+        const flag = document.createElement("span");
+        flag.className = "review-flag";
+        flag.textContent = review.flags.join(", ");
+        source.append(" ", flag);
+      }
+
       const quote = document.createElement("p");
       quote.className = "review-quote";
       quote.textContent = "“" + review.quote + "”";
 
       item.append(source, quote);
+
+      if (review.url) {
+        const link = document.createElement("a");
+        link.className = "review-link";
+        link.href = review.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Read the discussion →";
+        item.append(link);
+      }
+
       reviewList.append(item);
     });
 
@@ -340,7 +437,7 @@
 
       if (!health.ocr_backend) {
         problems.push(
-          "No OCR backend — image uploads won't work. Run <code>pip install rapidocr-onnxruntime</code>."
+          "No text extraction backend — image uploads won't work. Run <code>pip install rapidocr-onnxruntime</code>."
         );
       }
 

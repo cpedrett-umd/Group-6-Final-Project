@@ -560,6 +560,8 @@ textarea:focus { outline: 3px solid var(--teal); outline-offset: 1px; border-col
 
 /* ── Reviews (stubbed layer) ────────────────────────────────────── */
 
+/* ── Reviews (live review-insight layer) ────────────────────────── */
+
 .reviews-section { margin-bottom: 22px; }
 
 .mock-badge {
@@ -600,6 +602,51 @@ textarea:focus { outline: 3px solid var(--teal); outline-offset: 1px; border-col
 }
 
 .review-quote { margin: 0; font-size: 16.5px; }
+
+/* The glossary, the summary and the no-entity note stack their content
+   vertically, so the flex row that suits a source chip beside a quote gets in
+   their way. */
+.review-glossary,
+.review-summary,
+.review-empty { display: block; }
+
+.glossary { margin: 10px 0 0; }
+.glossary dt { margin-top: 10px; font-weight: 700; font-size: 16.5px; }
+.glossary dt:first-child { margin-top: 0; }
+.glossary dd {
+  margin: 3px 0 0;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.review-summary .review-quote {
+  margin-top: 10px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.review-empty .review-quote { color: var(--ink-soft); line-height: 1.5; }
+
+/* An affiliate page is kept rather than dropped — sometimes it is the most
+   candid source available — but the reader is told what it is. */
+.review-flag {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8a6516;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.review-link {
+  flex-basis: 100%;
+  margin-top: 2px;
+  color: var(--teal-dark);
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.review-link:hover { text-decoration: none; }
 
 /* ── Full explanation ───────────────────────────────────────────── */
 
@@ -725,4 +772,11 @@ summary::marker { color: var(--teal); }
 
   .review { gap: 8px; padding: 11px 12px; }
   .dist td:first-child { width: 46%; }
+  .glossary { margin: 0.5rem 0 0; }
+  .glossary dt { font-weight: 600; margin-top: 0.5rem; }
+  .glossary dd { margin: 0.15rem 0 0; }
+  .review-summary .review-quote { font-style: normal; }
+  .review-flag { font-size: 0.85em; opacity: 0.75; font-weight: 400; }
+  .review-link { display: inline-block; margin-top: 0.4rem; font-size: 0.9em; }
+  .review-empty .review-quote { font-style: normal; }
 }
