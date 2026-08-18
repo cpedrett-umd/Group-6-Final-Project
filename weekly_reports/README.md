@@ -12,5 +12,6 @@ Each team commits one report here before every lecture, named `weekNN.md`
 4. Commit it to your repository before the session. Then give your 2 to 5 minute
    standup using the same four beats: shipped, learned, blocker, next goal.
 
-See [`../project/guidelines.md`](../project/guidelines.md) for the full project
-description, timeline, and grading rubric.
+The reports here run week 4 through week 11 (week 7 was the midsemester
+presentation). They are the project's dated progress record and are kept as
+written.

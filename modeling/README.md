@@ -1,18 +1,24 @@
-# modeling/ — tokenizer
+# modeling/ — tokenizer, classifier training, and evaluation studies
 
-This directory is **tokenizer-only**. It turns the labeled ads dataset into
-fixed-width tensors a pretrained transformer (`AutoModel`) can consume
-directly. Model architecture, training loop, and label encoding are **not**
-implemented here — that's the next step, owned by the model devs.
+This directory holds the full modeling pipeline: the tokenizer that turns the
+labeled ads dataset into fixed-width tensors, the DistilBERT training and
+hyperparameter-tuning scripts, non-neural baselines, and the evaluation
+notebooks. The shipped checkpoint lives in `hyperopt_results/best_distilbert_model/`
+(Git LFS, float16) and is what `app/predict.py` serves.
 
 ## What's in here
-
-This directory holds the **code**; running it writes the tokenized
-**artifacts** into `../datasets/text_processing/` (next to the source CSV).
 
 | File | What it is |
 |---|---|
 | [hf_tokenizer.py](hf_tokenizer.py) | `AdsTokenizer` (wraps a HF `AutoTokenizer`) + the script that builds the artifacts below |
+| [train_hyperopt.py](train_hyperopt.py) | Hyperopt TPE search (3 trials) + retrain-winner + held-out evaluation |
+| [train_best.py](train_best.py) | Retrains just the winning config from `hyperopt_results/best_parameters.txt` |
+| [train_baseline.py](train_baseline.py) | Default-hyperparameter DistilBERT fine-tune |
+| [train_baselines.py](train_baselines.py) | Majority-class and TF-IDF + LogReg baselines on the same split (0.045 / 0.895 macro F1 vs 0.919 for the tuned model) |
+| [compress_model.py](compress_model.py) | float32 → float16 weight compression before committing |
+| [vlm_extraction.ipynb](vlm_extraction.ipynb) | OCR-vs-VLM extraction study on six real ads (inputs: see [data/README.md](data/README.md)) |
+| [sentence_attribution.ipynb](sentence_attribution.ipynb) | Per-sentence classification study on a video-ad transcript |
+| [occlusion_attribution.ipynb](occlusion_attribution.ipynb) | Leave-one-sentence-out attribution study |
 | [requirements.txt](requirements.txt) | `torch`, `pandas`, `transformers` |
 
 Generated artifacts (written to `../datasets/text_processing/`):
@@ -37,42 +43,43 @@ b = torch.load("../datasets/text_processing/tokenized_ads.pt", weights_only=Fals
 input_ids, attention_mask, labels = b["input_ids"], b["attention_mask"], b["labels"]
 ```
 
-### Shapes / contents (as of this handoff)
+### Shapes / contents (current — the merged 8-class corpus)
 
 ```
 >>> import torch; b = torch.load('../datasets/text_processing/tokenized_ads.pt', weights_only=False)
 >>> b['input_ids'].shape, b['input_ids'].dtype
-torch.Size([3230, 128]) torch.int64
+torch.Size([4374, 128]) torch.int64
 >>> b['attention_mask'].shape, b['attention_mask'].dtype
-torch.Size([3230, 128]) torch.int64
+torch.Size([4374, 128]) torch.int64
 >>> len(b['labels']), type(b['labels'][0])
-3230 <class 'str'>
+4374 <class 'str'>
 ```
 
 Bundle keys:
 
-- `input_ids` — `(3230, 128)` int64 tensor, padded/truncated to `max_len=128`
-- `attention_mask` — `(3230, 128)` int64 tensor, same shape as `input_ids`
-- `labels` — list of 3230 raw label **strings** (untouched from the CSV — not yet encoded to ints/one-hot, that's on the model side)
-- `texts` — list of 3230 original `ad_text` strings, aligned row-for-row with the tensors (useful for debugging/error analysis)
+- `input_ids` — `(4374, 128)` int64 tensor, padded/truncated to `max_len=128`
+- `attention_mask` — `(4374, 128)` int64 tensor, same shape as `input_ids`
+- `labels` — list of 4,374 raw label **strings** (the training scripts build their own label2id)
+- `texts` — list of 4,374 original `ad_text` strings, aligned row-for-row with the tensors (useful for debugging/error analysis)
 - `model_name` — `"distilbert-base-uncased"`
 - `max_len` — `128`
 
-Label distribution (7 classes, single-label per ad):
+Label distribution (8 classes, single-label per ad — from
+`ads_dataset_merged.csv`):
 
 ```
+Urgency                  959
 Exaggerated Claims       905
-Urgency                  763
-Scarcity                 449
+Scarcity                 798
+Social Proof             510
 Authority Manipulation   389
 Fear Appeals             304
+Neutral                  287
 FOMO                     222
-Social Proof             198
 ```
 
-Classes are imbalanced (~4.6x between largest and smallest) — worth
-accounting for in the loss (e.g. class weighting) or eval metrics (macro F1
-over accuracy).
+Classes are imbalanced (~4.3x between largest and smallest); the training
+scripts compensate with class-weighted cross-entropy and report macro F1.
 
 ## Feeding a batch into a model
 
@@ -101,11 +108,12 @@ inputs, label = ds[0]  # inputs = {"input_ids": ..., "attention_mask": ...}
 ## Regenerating the artifacts
 
 If the dataset changes, rebuild both the tensors and the saved tokenizer.
-The script's defaults already read from and write to
-`../datasets/text_processing/`, so no arguments are needed:
+**Note:** the script's `--data` default still points at the original
+`ads_dataset_labeled.csv` (3,230 rows, 7 classes); the committed artifacts were
+built from the merged corpus, so pass it explicitly:
 
 ```bash
-python hf_tokenizer.py
+python hf_tokenizer.py --data "../datasets/text_processing/ads_dataset_merged.csv"
 ```
 
 Equivalent to spelling out the defaults:
@@ -123,7 +131,7 @@ saving.
 
 ## Notes
 
-- **Labels are strings, not ints.** Build your own label2id mapping (the 7
+- **Labels are strings, not ints.** Build your own label2id mapping (the 8
   classes are listed above); nothing here assumes an encoding.
 - **Tokenizer is swappable.** Everything in `hf_tokenizer.py` works with any
   `AutoTokenizer`-compatible checkpoint — pass `--model bert-base-uncased` (or

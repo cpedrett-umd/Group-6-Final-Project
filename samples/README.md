@@ -17,49 +17,47 @@ phrases found in the words themselves.
 
 | Sample | Model pick | Confidence | Tactics shown |
 |---|---|---|---|
-| Urgency | Urgency | 94.4% | Urgency |
-| Scarcity | **FOMO** | 99.1% | FOMO, Scarcity |
-| FOMO | FOMO | 99.1% | FOMO |
-| Fear appeal | Fear Appeals | 98.6% | Fear, Urgency |
-| Social proof | Social Proof | 97.8% | Social proof |
+| Urgency | Urgency | 92.8% | Urgency |
+| Scarcity | **FOMO** | 98.5% | FOMO, Scarcity |
+| FOMO | FOMO | 99.0% | FOMO |
+| Fear appeal | Fear Appeals | 99.4% | Fear, Urgency |
+| Social proof | **Exaggerated Claims** | 69.9% | Big claim, Social proof |
 | Authority | Authority Manipulation | 98.0% | Authority |
-| Exaggerated claims | Exaggerated Claims | 85.7% | Big claim |
-| Several at once | Authority Manipulation | 89.6% | Authority, Urgency, Fear, Big claim, Scarcity |
-| Clean ad | **Social Proof** | 75.8% | **Social proof** ← wrong, see below |
+| Exaggerated claims | **Scarcity** | 44.7% (suppressed) | Big claim |
+| Several at once | Authority Manipulation | 87.7% | Authority, Fear, Urgency, Big claim, Scarcity |
+| Clean ad | Neutral | 99.6% | *(none — no false alarm)* |
 
 ## Image results
 
 Upload each from `images/`. OCR confidence is RapidOCR's own score.
 
-| File | OCR | Spacing repaired | Tactics shown |
-|---|---|---|---|
-| `supplement_ad.png` | 98.2% | yes | Social proof, Big claim, Authority, Scarcity, Fear, Urgency |
-| `flash_sale_ad.png` | 97.2% | yes | FOMO, Scarcity, Urgency |
-| `home_security_ad.png` | 97.3% | yes | Fear, Authority, Urgency |
-| `bakery_ad.png` | 97.8% | no | Urgency ← wrong, see below |
+| File | OCR | Spacing repaired | Model pick | Tactics shown |
+|---|---|---|---|---|
+| `supplement_ad.png` | 98.2% | yes | Authority Manipulation 53.6% | Authority, Social proof, Urgency, Fear, Big claim, Scarcity |
+| `flash_sale_ad.png` | 97.2% | yes | FOMO 98.2% | FOMO, Scarcity, Urgency |
+| `home_security_ad.png` | 97.3% | yes | Fear Appeals 99.4% | Fear, Authority, Urgency |
+| `bakery_ad.png` | 97.8% | no | Neutral 99.6% | *(none — no false alarm)* |
 
 `flash_sale_ad.png` is white-on-dark and `home_security_ad.png` uses tighter
 type, so they exercise harder OCR than a clean black-on-white render.
 
 ## Two things these samples deliberately expose
 
-**The classifier cannot say "this ad is fine."** `ads_dataset_labeled.csv` has
-no `Neutral` rows, so softmax must put its mass on one of the seven tactics.
-The bakery ad is genuinely clean, and the model still calls it Social Proof at
-75.8% (text) or Urgency at 86.6% (image) — confidently, with no trigger phrase
-anywhere in it.
+**The clean ads now come back Neutral.** Under the earlier 7-class model the
+bakery ad was a confident false alarm (75.8% Social Proof); after the dataset
+rebuild added a Neutral class, both the pasted clean ad and `bakery_ad.png`
+classify Neutral at 99.6% with no findings shown. Keep them in every demo —
+"try to fool it" is the beat audiences remember.
 
-The low-confidence guard in `app/tactics.py` suppresses this only below 0.60,
-so these get through and are reported as findings. Raising the threshold is not
-the fix: it would also suppress correct single-tactic detections scoring in the
-70s. **The fix is dataset-side — add Neutral examples and retrain.** Until then,
-expect false alarms on clean ads, and say so when demoing.
-
-**The two signals cover each other.** The Scarcity sample is a good case: the
-model confidently calls it FOMO (99.1%) and is wrong, but "Only 3 bottles left",
-"Limited supply", and "while supplies last" all match the guidelines lexicon, so
-Scarcity still appears in the panel. Neither signal alone would have produced
-the right answer.
+**The two signals cover each other.** Three samples show it. The Scarcity
+sample: the model confidently says FOMO (98.5%) and is wrong, but "Only 3
+bottles left" and "while supplies last" match the guidelines lexicon, so
+Scarcity still appears. The Social-proof sample: the model picks Exaggerated
+Claims, but "Trusted by millions" and "best seller" surface Social proof via
+phrases. The Exaggerated-claims sample: the model's pick (Scarcity, 44.7%)
+falls below the 0.60 guard and is suppressed as "not sure" — but the phrase
+lexicon still shows Big claim. Neither signal alone would produce the right
+panel; together they do.
 
 ## Regenerating the images
 

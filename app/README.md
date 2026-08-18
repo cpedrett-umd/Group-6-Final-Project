@@ -13,9 +13,10 @@ app/
 ├── server.py        Flask API + static serving
 ├── desktop.py       runs the same UI as a native desktop window
 ├── predict.py       loads the tuned DistilBERT, text -> label + confidence
-├── ocr.py           image bytes -> text (RapidOCR), with space repair
+├── ocr.py           image bytes -> text (VLM preferred, RapidOCR fallback), with space repair
+├── vlm_ocr.py       VLM transcription backend (transcription-only prompt, needs OPENAI_API_KEY)
 ├── tactics.py       trigger-phrase lexicon + plain-language copy
-├── reviews.py       stub for the not-yet-built review-insight layer
+├── reviews.py       review-insight layer: retrieval + summary, sample-data fallback
 ├── requirements.txt
 └── static/          index.html, styles.css, app.js, demo-page.html
 ```
@@ -108,8 +109,8 @@ driving a confident-looking result.
 ## How the panel's tactic list is built
 
 The wireframe lists five tactics for one ad. The classifier is single-label over
-seven classes, so it cannot produce that list alone. Two signals are combined,
-and each row is badged with its source:
+eight classes (7 tactics + Neutral), so it cannot produce that list alone. Two
+signals are combined, and each row is badged with its source:
 
 - **`model pick`** — the tuned DistilBERT's predicted class, with its softmax
   confidence. Exactly one row carries this.
@@ -119,20 +120,30 @@ and each row is badged with its source:
   the dataset was built from.
 
 A row can carry both. The model's pick always leads the list. Full model output
-— all seven classes with confidence bars — sits under *Read the full
+— all eight classes with confidence bars — sits under *Read the full
 explanation*, so nothing about the ranking is hidden.
 
 This is the one place the demo deviates from the wireframe's implied behavior,
 and the badges make the deviation visible rather than papering over it.
 
-## Not built yet
+## The review-insight layer
 
-**The review-insight layer** ("What real customers say") is a separate
-workstream. `reviews.py` returns placeholder quotes flagged `mock: true`, and the
-UI renders a *sample data* badge over the section. To make it real, replace
-`reviews.fetch()` — the response shape is what the front end already renders.
+**"What real customers say"** (`reviews.py`) runs live when API keys are set:
+an OpenAI glossary of authority-lending terms, Tavily web search shaped as
+complaint queries, source-independence ranking (advertiser-owned domains
+excluded, affiliate content flagged), and a summary grounded only in retrieved
+passages, with links. It needs `OPENAI_API_KEY` and `TAVILY_API_KEY`; without
+them — or on any failure — it degrades to hard-coded sample quotes flagged
+`mock: true`, and the UI renders a *sample data* badge over the section, so a
+demo never breaks and mock data is never mistaken for real evidence.
 
 ## Notes on OCR
+
+Image extraction tries the VLM first (`vlm_ocr.py`, transcription-only prompt —
+it may not name tactics or judge the ad) when `OPENAI_API_KEY` is set, because
+it recovers substantially more text from complex layouts (89% vs 64% of
+required strings in our six-real-ad study). RapidOCR remains the fully local,
+no-key fallback.
 
 RapidOCR (ONNX) was chosen over Tesseract and EasyOCR because it is pip-only
 with no system installer, ships ~15MB of models, and runs an ad in about a
@@ -154,7 +165,7 @@ means adding a function there and nothing else.
 python -m pytest tests/ -q
 ```
 
-118 tests over the lexicon, OCR repair, the classifier wrapper, and every API
+130 tests over the lexicon, OCR repair, the classifier wrapper, and every API
 route. Tests needing the weights or an OCR backend skip rather than fail, so a
 fresh clone runs green. See [tests/README.md](../tests/README.md).
 
@@ -173,7 +184,8 @@ fresh clone runs green. See [tests/README.md](../tests/README.md).
 }
 ```
 
-`GET /api/health` — `{ "model_ready": bool, "ocr_backend": "rapidocr" | null }`.
+`GET /api/health` — `{ "model_ready": bool, "ocr_backend": "vlm" | "rapidocr" | null }`
+(`"vlm"` when `OPENAI_API_KEY` is set, `"rapidocr"` otherwise).
 
 ## Scope
 

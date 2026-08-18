@@ -55,5 +55,5 @@ glossary/summary; `TAVILY_API_KEY` enables live review retrieval. Without keys,
 image ads use the on-device RapidOCR path and the review panel shows
 clearly-badged sample data.
 
-**Tests:** `python -m pytest tests/ -q` (126 Python) and
+**Tests:** `python -m pytest tests/ -q` (130 Python) and
 `cd extension/tests && npm install && npm test` (57 JavaScript).
