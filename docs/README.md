@@ -17,7 +17,8 @@ Jonathan Kim (App · Browser Extension)
 | File | What it is |
 |---|---|
 | `slides.pdf` | Final presentation slides (11 slides, one per rubric area) |
-| `report.md` | Final written report, sectioned by the five rubric areas |
+| `AdInsight_Final_Presentation.pptx` | Same deck with speaker notes, for presenting |
+| `AdInsight_Final_Report.docx` | Final written report, sectioned by the five rubric areas |
 
 ## Run it locally
 
