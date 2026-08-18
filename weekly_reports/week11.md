@@ -71,6 +71,62 @@ it is unusable downstream. **Missing** — absent entirely.
 | RapidOCR (raw) | 53 | 29 | 19 | 5 | 55% | 2.0 |
 | `app/ocr.py` | 53 | 34 | 13 | 6 | 64% | 0.8 |
 | **VLM (gpt-4o)** | 53 | **47** | **2** | 4 | **89%** | 1.4 |
+
+Traditional OCR can fail when advertisement text is partially obstructed or integrated into complex visual layouts.
+
+In the Ryze advertisement below, the VLM preserves the decision-relevant text more accurately, while OCR loses part of the phrase **"THIS WEEK ONLY"**. This matters because missing words can prevent downstream persuasion tactics such as urgency from being detected.
+
+<table>
+  <tr>
+    <th align="center">VLM Extraction</th>
+    <th align="center">Traditional OCR</th>
+  </tr>
+  <tr>
+    <td align="center">
+      <img
+        src="https://github.com/user-attachments/assets/e2fcbcc3-dade-4a25-9c70-b4df61c75542"
+        alt="VLM text extraction on Ryze advertisement"
+        width="100%"
+      />
+    </td>
+    <td align="center">
+      <img
+        src="https://github.com/user-attachments/assets/ce7ebe07-f257-4156-8295-1ebd24cc5fcc"
+        alt="Traditional OCR output on Ryze advertisement"
+        width="100%"
+      />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      ✅ Preserves decision-relevant text
+    </td>
+    <td align="center">
+      ❌ Misses or corrupts important text
+    </td>
+  </tr>
+</table>
+
+### Why this matters
+
+For example:
+
+> **THIS WEEK ONLY** → urgency signal
+
+If OCR extracts the phrase incorrectly, such as **"IS WEEK ONLY"**, the downstream classifier may fail to detect the urgency tactic.
+
+AdInsight therefore uses a Vision-Language Model only for **text transcription**. The extracted text is then passed to our fine-tuned DistilBERT model, which performs the actual persuasion-tactic classification. 
+
+### Why this matters
+
+Missing even a single word can change the classifier's result. In this example:
+
+> **THIS WEEK ONLY** → urgency signal
+
+If OCR drops the word **"THIS"**, the downstream classifier may fail to recognize the intended pressure tactic.
+
+> **Note:** The VLM is restricted to transcription only. Persuasion-tactic detection is performed by our fine-tuned DistilBERT classifier.
+
  
 *PaddleOCR was included in the comparison but failed on all six images with an
 API argument error and is omitted from the table.*
