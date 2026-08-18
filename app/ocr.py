@@ -4,9 +4,15 @@ The repo had no live OCR path: the image modality was collected offline and
 merged into the CSV, leaving nothing that turns an uploaded screenshot into
 model input at request time. This module is that missing step.
 
-Backend is RapidOCR (ONNX): pip-only with no system installer, ~15MB of models,
-and about a second per ad on CPU. `_BACKENDS` is an ordered list, so a teammate
-can add Tesseract or EasyOCR later without touching the Flask route.
+`_BACKENDS` is an ordered list, tried in order, first usable one wins:
+
+  * vlm       -- a vision-language model used purely as a transcriber. On a
+                 six-ad evaluation set it recovered 89% of required strings
+                 against 64% for RapidOCR. Needs OPENAI_API_KEY and a network
+                 call, so it is not always available.
+  * rapidocr  -- ONNX, pip-only with no system installer, ~15MB of models, about
+                 a second per ad on CPU. Always available once installed, and
+                 the fallback when the VLM call fails.
 
 A note on space repair. The English recognition model sometimes returns a line
 with its spaces collapsed -- "FINALHOURS:", "70%offbeforethesupplementban".
@@ -14,6 +20,13 @@ That wrecks both wordpiece tokenization and trigger-phrase matching, so merged
 runs are split back apart with `wordninja`. The repair is deliberately timid:
 splitting is only safe when a token is obviously merged, because the same
 splitter would otherwise turn brand names like "MemoryMax" into "Memory Max".
+
+Space repair is why the VLM helps as much as it does. Measured on real ad
+screenshots, only 5-6 required strings were lost outright by OCR; 13-19 were
+recovered but run together, which survives as text but cannot match the
+word-boundary regexes in tactics.py. On the RYZE ad a profile avatar overlaps
+the "TH" in "THIS WEEK ONLY" and OCR returns "ISWEEKONLY", so the urgency
+trigger never fired and the ad was reported to the user as clean.
 """
 from __future__ import annotations
 
@@ -97,20 +110,59 @@ def _rapidocr(image_bytes: bytes):
     return lines, scores
 
 
+def _vlm(image_bytes: bytes):
+    """Vision-language model backend. Returns (lines, confidences).
+
+    The model transcribes only -- it does not classify, name tactics, or judge
+    the ad. That stays with the tuned classifier; the prompt in vlm_ocr enforces
+    the boundary.
+
+    Raises VLMUnavailableError on a missing key, timeout, or network failure.
+    `extract_text` catches that and falls through to RapidOCR, because this is a
+    network call sitting in the request path and a demo must not depend on it.
+    """
+    import vlm_ocr
+
+    result = vlm_ocr.extract_text(image_bytes)
+
+    # The API returns no per-line score. An empty list makes extract_text report
+    # `confidence: None` rather than inventing a number the model never gave.
+    return result["lines"], []
+
+
 _engine = None
 
-_BACKENDS = [("rapidocr", _rapidocr)]
+# Ordered by preference. The VLM is more accurate but needs a key and a network
+# round trip; RapidOCR always works offline and is the fallback.
+_BACKENDS = [("vlm", _vlm), ("rapidocr", _rapidocr)]
+
+_FALLBACK_BACKEND = "rapidocr"
+
+
+def _backend_usable(name: str) -> bool:
+    """Whether one backend can actually run right now."""
+    if name == "vlm":
+        try:
+            import vlm_ocr
+        except ImportError:
+            return False
+        return vlm_ocr.is_available()
+
+    if name == "rapidocr":
+        try:
+            import rapidocr_onnxruntime  # noqa: F401
+        except ImportError:
+            return False
+        return True
+
+    return False
 
 
 def available_backend() -> str | None:
-    """Name of the first importable backend, or None if OCR can't run."""
+    """Name of the first usable backend, or None if OCR can't run at all."""
     for name, _function in _BACKENDS:
-        try:
-            if name == "rapidocr":
-                import rapidocr_onnxruntime  # noqa: F401
+        if _backend_usable(name):
             return name
-        except ImportError:
-            continue
 
     return None
 
@@ -190,9 +242,13 @@ def extract_text(image_bytes: bytes) -> dict:
     """Run OCR over an image and return text ready for the classifier.
 
     Returns the joined `text`, the `raw_text` before space repair (so the UI can
-    show what OCR literally saw), a mean `confidence`, and the `line_count`.
-    Callers should display `text` for confirmation before trusting the verdict --
-    a bad scan should be visible, not silently classified.
+    show what the backend literally saw), a mean `confidence`, and the
+    `line_count`. Callers should display `text` for confirmation before trusting
+    the verdict -- a bad scan should be visible, not silently classified.
+
+    `confidence` is None when the backend reports no per-line score, which is
+    the case for the VLM. The UI must treat that as "not reported" rather than
+    printing 0%.
     """
     backend = available_backend()
 
@@ -205,14 +261,27 @@ def extract_text(image_bytes: bytes) -> dict:
 
     function = dict(_BACKENDS)[backend]
 
-    lines, scores = function(image_bytes)
+    try:
+        lines, scores = function(image_bytes)
+    except UnreadableImageError:
+        # A corrupt upload will fail on every backend -- retrying wastes a
+        # round trip and hides the real cause from the user.
+        raise
+    except Exception:
+        # The VLM is a network call: a missing key, a timeout, or a rate limit
+        # must degrade to the local backend rather than break the request.
+        if backend == _FALLBACK_BACKEND or not _backend_usable(_FALLBACK_BACKEND):
+            raise
+
+        backend = _FALLBACK_BACKEND
+        lines, scores = dict(_BACKENDS)[_FALLBACK_BACKEND](image_bytes)
 
     if not lines:
         return {
             "text": "",
             "raw_text": "",
             "lines": [],
-            "confidence": 0.0,
+            "confidence": None if not scores else 0.0,
             "line_count": 0,
             "backend": backend,
             "repaired": False,
@@ -224,7 +293,9 @@ def extract_text(image_bytes: bytes) -> dict:
     raw_text = " ".join(raw_lines)
     text = " ".join(repaired_lines)
 
-    confidence = sum(scores) / len(scores) if scores else 0.0
+    # No scores means the backend does not report confidence, which is not the
+    # same as reporting zero.
+    confidence = round(sum(scores) / len(scores), 4) if scores else None
 
     return {
         "text": text,
@@ -232,7 +303,7 @@ def extract_text(image_bytes: bytes) -> dict:
         # Per-line output so multi-frame captures (animated/video ads) can be
         # merged with line-level dedup instead of concatenating whole frames.
         "lines": repaired_lines,
-        "confidence": round(confidence, 4),
+        "confidence": confidence,
         "line_count": len(lines),
         "backend": backend,
         "repaired": text != raw_text,

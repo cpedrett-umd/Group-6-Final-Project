@@ -63,6 +63,64 @@ def build_summary(rows):
         "message": f"This ad uses {count} {noun}. Nothing requires a decision today.",
         "count": count,
     }
+def extract_claim(text, image_bytes=None):
+    """Brand, promise, and the search a cautious buyer would type.
+
+    Returns (brand, promise, query), any of which may be None. Never raises:
+    the review layer degrades to its no-entity branch without this, and a
+    failure here must not cost the user their tactic analysis.
+    """
+    import os
+
+    if not os.environ.get("OPENAI_API_KEY") or not text.strip():
+        return None, None, None
+
+    prompt = (
+        "You are looking at an advertisement someone has just seen. They want "
+        "to find out what other people's real experience with this product has "
+        "been.\n\nOutput exactly three lines:\n\n"
+        "BRAND: the brand or product name as written in the ad, or NONE\n"
+        "PROMISE: the outcome the ad says the product will deliver, or NONE\n"
+        "QUERY: the search a cautious buyer would type to find out whether "
+        "other people actually got that outcome\n\n"
+        "Rules for QUERY:\n"
+         "The PROMISE is the outcome the reader is being offered, not a "
+        "description of the product. It may be stated in words, implied by an "
+        "image, or carried by a number. Ingredients, materials, brand story, "
+        "flavour, styling and technical specifications are never the promise "
+        "-- they are how the ad supports it.\n\n"
+        "Ask yourself what would change for the reader if this worked. That is "
+        "the promise.\n\n"
+        "QUERY must ask whether real people got that outcome. It should read "
+        "like what someone would type after seeing the ad and wondering "
+        "whether to believe it -- the brand, the outcome, and a word that "
+        "leads to other people's experience. Never build the query from the "
+        "product's ingredients or description.\n\n"
+        "Report only what the ad states. Do not evaluate it, do not say "
+        "whether the promise is true, and do not name any persuasion tactic.\n\n"
+        "Advertisement text:\n" + text[:2000]
+    )
+
+    try:
+        from openai import OpenAI
+
+        response = OpenAI(timeout=15).chat.completions.create(
+            model=os.environ.get("ADINSIGHT_VLM_MODEL", "gpt-4o-mini"),
+            max_tokens=200,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = (response.choices[0].message.content or "")
+    except Exception:
+        return None, None, None
+
+    found = {}
+    for line in raw.splitlines():
+        key, _, value = line.partition(":")
+        key, value = key.strip().upper(), value.strip()
+        if key in {"BRAND", "PROMISE", "QUERY"} and value:
+            found[key] = None if value.upper() == "NONE" else value
+
+    return found.get("BRAND"), found.get("PROMISE"), found.get("QUERY")
 
 
 @app.after_request
@@ -163,7 +221,8 @@ def analyze():
 
                 if extraction["lines"]:
                     readable_frames += 1
-                    confidences.append(extraction["confidence"])
+                    if extraction["confidence"] is not None:
+                        confidences.append(extraction["confidence"])
                     raw_parts.append(extraction["raw_text"])
 
                 for line in extraction["lines"]:
@@ -182,7 +241,7 @@ def analyze():
                     "raw_text": " ".join(raw_parts),
                     "confidence": round(
                         sum(confidences) / len(confidences), 4
-                    ) if confidences else 0.0,
+                    ) if confidences else None,
                     "line_count": len(merged_lines),
                     "backend": ocr.available_backend(),
                     "repaired": text != " ".join(raw_parts),
@@ -211,6 +270,7 @@ def analyze():
 
         prediction = predict.predict(text)
         rows = tactics.build_tactics(prediction, text)
+        brand, promise, claim_query = extract_claim(text)
 
         return jsonify(
             {
@@ -219,7 +279,13 @@ def analyze():
                 "prediction": prediction,
                 "tactics": rows,
                 "summary": build_summary(rows),
-                "reviews": reviews.fetch(text),
+                "claim": {"brand": brand, "promise": promise},
+                "reviews": reviews.fetch(
+                    text,
+                    brand=brand,
+                    tactic=prediction["label"],
+                    claim_query=claim_query,
+                ),
             }
         )
 
