@@ -18,7 +18,6 @@ Jonathan Kim (App · Browser Extension)
 |---|---|
 | `slides.pdf` | Final presentation slides (11 slides, one per rubric area) |
 | `report.md` | Final written report, sectioned by the five rubric areas |
-| `demo.mp4` | Recorded demo backup (optional) |
 
 ## Run it locally
 
