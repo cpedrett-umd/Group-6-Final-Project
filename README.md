@@ -464,10 +464,10 @@ these caught.
 
 | Name | Contribution |
 |---|---|
-| Chris Pedretti | Engineering, Data&Eval |
-| Shashank Ashoka | Architecture, OCR, Agents |
-| Ciara Cameron | Review insight layer, external evidence retrieval |
-| Jonathan Kim | App interface and browser extension |
+| Chris Pedretti | Engineering — classifier training & tuning infra, tokenizer, app & browser extension, test suites |
+| Shashank Ashoka | Architecture — ASR & VLM studies, attribution analysis, VLM extraction + review-insight layer |
+| Ciara Cameron | Data & annotation — labeling, cleaning, dataset expansion; Hyperopt tuning run; final report |
+| Jonathan Kim | Data pipeline — collection & preprocessing scripts, labeling helpers, baseline model training |
 
 ---
 

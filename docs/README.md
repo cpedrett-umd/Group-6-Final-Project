@@ -8,9 +8,10 @@ exaggerated claims), explaining it in plain language with the ad's own words as
 evidence, and pulling independent review context. Built for adults 60+; no
 "scam / not scam" verdicts, no legal claims.
 
-**Team:** Chris Pedretti (Engineering · Data & Eval) · Shashank Ashoka
-(Architecture · OCR/VLM · Agents) · Ciara Cameron (Review Insights · Evidence) ·
-Jonathan Kim (App · Browser Extension)
+**Team:** Chris Pedretti (Engineering · Classifier · App & Extension) ·
+Shashank Ashoka (Architecture · ASR/VLM Studies · Review Layer) ·
+Ciara Cameron (Data & Annotation · Hyperparameter Tuning) ·
+Jonathan Kim (Data Pipeline · Preprocessing · Baseline Model)
 
 ## Contents
 
