@@ -113,7 +113,7 @@ than a missed ad.
 
 ## Tests
 
-57 tests over `content.js` and `background.js`, using Node's built-in runner
+56 tests over `content.js` and `background.js`, using Node's built-in runner
 plus jsdom. No browser and no running server needed — the `chrome` API and the
 network are both faked.
 

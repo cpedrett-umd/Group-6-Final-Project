@@ -14,7 +14,7 @@ Jonathan Kim](https://github.com/Jonathan5108) .
 
 ## Abstract
 
-Online advertisements routinely employ emotionally persuasive language to influence consumer behavior — particularly targeting older adults with health, financial, and wellness products. We present a multi-modal NLP pipeline that ingests ad content from text or images, detects persuasion tactics at the phrase level, and returns plain-language explanations alongside real-world review evidence. The system is designed for users aged 60 and older who encounter such ads on Facebook, Instagram, YouTube, and news websites, and who may lack a reliable method for evaluating ad credibility before engaging. Unlike approaches that classify ads as fraudulent or legally misleading, our system focuses on **awareness and transparency**: explaining *why* a piece of language is persuasive and *what tactic it employs*, without making legal judgments.
+Online advertisements routinely employ emotionally persuasive language to influence consumer behavior — particularly targeting older adults with health, financial, and wellness products. We present a multi-modal NLP pipeline that ingests ad content from text or images, detects persuasion tactics at the phrase level, and returns plain-language explanations. The system is designed for users aged 60 and older who encounter such ads on Facebook, Instagram, YouTube, and news websites, and who may lack a reliable method for evaluating ad credibility before engaging. Unlike approaches that classify ads as fraudulent or legally misleading, our system focuses on **awareness and transparency**: explaining *why* a piece of language is persuasive and *what tactic it employs*, without making legal judgments.
 
 ---
 
@@ -22,7 +22,7 @@ Online advertisements routinely employ emotionally persuasive language to influe
 
 ![System Architecture](docs/workflow_ad_explainer.png)
 
-The pipeline operates in four stages. A confused user who encounters an emotionally loaded ad submits it through one of two interfaces. The input processing layer normalizes the submission into raw text regardless of modality. The main analysis model produces two parallel outputs: a claim and persuasion analysis, and a review insight layer that grounds the analysis in external evidence. These are merged into a single friendly explanation returned to the user.
+The pipeline operates in four stages. A confused user who encounters an emotionally loaded ad submits it through one of two interfaces. The input processing layer normalizes the submission into raw text regardless of modality. The main analysis model produces a claim and persuasion analysis, returned to the user as a single friendly explanation. (An experimental review-insight layer that grounded the analysis in retrieved web evidence was removed from the final build — it was not reliable enough to ship.)
 
 ---
 
@@ -49,19 +49,12 @@ Both paths emit a unified extracted-text representation passed downstream.
 
 ### Main Analysis Model
 
-The extracted ad content is analyzed by a central NLP model that generates two types of insight simultaneously:
+The extracted ad content is analyzed by a central NLP model:
 
 **Claim and Persuasion Analysis**
 - Detects and classifies emotionally manipulative tactics (fine-tuned DistilBERT, 8 classes)
 - Matches trigger phrases from the labeling guidelines as a separate, checkable signal
-- Explains scientific or authority-lending terms used in the ad
 - Reports "not sure" below 60% confidence instead of guessing — never a scam/not-scam verdict
-
-**Review Insight Layer**
-- Searches independent web sources for real experiences with the advertised product
-- Excludes advertiser-owned pages; flags and down-ranks affiliate content
-- Summarizes only retrieved passages, with links so users can check the sources
-- Falls back to clearly-badged sample data when no API keys are configured
 
 ### Persuasion Tactics Detected
 
@@ -102,11 +95,11 @@ either a desktop app or a browser extension.
 | Tactic classifier | **Done** — test macro F1 **0.919**, weights committed |
 | Input processing — text + OCR/VLM | **Done** — VLM transcription when `OPENAI_API_KEY` is set, local RapidOCR fallback |
 | Explanation layer | **Done** — [`app/tactics.py`](app/tactics.py) |
-| Review-insight layer | **Done** — [`app/reviews.py`](app/reviews.py); sample data clearly badged without API keys |
+| Review-insight layer | **Removed** — the retrieval layer was not reliable enough to ship, and there was no time left to fix it |
 | App surface | **Done** — [`app/`](app/README.md) |
 | Browser-extension surface | **Done** — [`extension/`](extension/README.md) |
 | Usability testing with adults 60+ | **Done** — 6 users, ages 60–74; see the [final report](docs/AdInsight_Final_Report.pdf) |
-| Tests | **Done** — 130 Python + 57 JavaScript |
+| Tests | **Done** — 130 Python + 56 JavaScript |
 
 **Known limitation worth stating up front.** The model performs strongly on
 held-out data but generalizes poorly to ad genres absent from its training
@@ -200,7 +193,6 @@ Group-6-Final-Project/
 │   ├── ocr.py                              # Ad screenshot → text (VLM preferred, RapidOCR fallback)
 │   ├── vlm_ocr.py                          # VLM transcription backend (transcription-only prompt)
 │   ├── tactics.py                          # Trigger-phrase lexicon + plain-language copy
-│   ├── reviews.py                          # Review-insight layer (retrieval + summary, sample-data fallback)
 │   ├── static/                             # index.html, styles.css, app.js, demo-page.html
 │   ├── requirements.txt
 │   └── README.md                           # Setup, the three inputs, API shape
@@ -210,7 +202,7 @@ Group-6-Final-Project/
 │   ├── content.js                          # Overlay: ad detection, pick mode, rendering
 │   ├── panel.css                           # Overlay styles (shadow-root scoped)
 │   ├── popup.html / popup.js               # Toolbar popup
-│   ├── tests/                              # 57 tests (node:test + jsdom)
+│   ├── tests/                              # 56 tests (node:test + jsdom)
 │   └── README.md
 ├── samples/                                # Test material with measured results
 │   ├── ad_texts.md                         # Nine ad texts to copy-paste
@@ -233,9 +225,8 @@ Group-6-Final-Project/
 ```
 
 The abstract above describes the full system, and the repository covers all of
-it. The review-insight layer performs live retrieval when `OPENAI_API_KEY` and
-`TAVILY_API_KEY` are set, and degrades to clearly-badged sample data without
-them.
+it except the review-insight layer, which was removed from the final build
+because its retrieval was not reliable enough to ship.
 
 ---
 
@@ -451,7 +442,7 @@ python -m pytest tests/ -q
 cd extension/tests && npm install && npm test
 ```
 
-187 tests — **130 Python** over the analysis pipeline and API, **57 JavaScript**
+186 tests — **130 Python** over the analysis pipeline and API, **56 JavaScript**
 over the extension overlay (Node's built-in runner + jsdom; no browser or server
 needed). Tests that need the weights, an OCR backend, or a system font skip
 rather than fail, so a fresh clone runs green.
@@ -465,7 +456,7 @@ these caught.
 | Name | Contribution |
 |---|---|
 | Chris Pedretti | Engineering — classifier training & tuning infra, tokenizer, app & browser extension, test suites |
-| Shashank Ashoka | Architecture — ASR & VLM studies, attribution analysis, VLM extraction + review-insight layer |
+| Shashank Ashoka | Architecture — ASR & VLM studies, attribution analysis, VLM extraction |
 | Ciara Cameron | Data & annotation — labeling, cleaning, dataset expansion; Hyperopt tuning run; final report |
 | Jonathan Kim | Data pipeline — collection & preprocessing scripts, labeling helpers, baseline model training |
 

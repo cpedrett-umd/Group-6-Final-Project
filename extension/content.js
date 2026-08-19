@@ -110,14 +110,6 @@
             <ul class="ai-tactics"></ul>
           </section>
 
-          <section class="ai-reviews-section">
-            <h3 class="ai-title">What real customers say
-              <span class="ai-mock-badge">sample data</span>
-            </h3>
-            <p class="ai-mock-notice"></p>
-            <ul class="ai-reviews"></ul>
-          </section>
-
           <details class="ai-detail">
             <summary>Read the full explanation</summary>
             <div class="ai-detail-body">
@@ -1277,123 +1269,6 @@
       body.append(name, why);
       item.append(dot, body);
       list.append(item);
-    });
-
-    // ── Review layer ──────────────────────────────────────────
-    //
-    // Three parts: what the technical words mean, what people report, and
-    // where to read it. The middle section is built only from retrieved
-    // passages — nothing here is the model's own opinion of the product.
-    //
-    // Mirrors app/static/app.js. If the copy changes, change it in both.
- 
-    const reviews = data.reviews || {};
- 
-    inResult(".ai-mock-notice").textContent = reviews.notice || "";
-    inResult(".ai-mock-badge").hidden = !reviews.mock;
- 
-    const reviewList = inResult(".ai-reviews");
-    reviewList.replaceChildren();
- 
-    // 1. Glossary. An ad leaning on enzyme names persuades with vocabulary,
-    // so plain definitions are the direct counter.
-    if (reviews.glossary && reviews.glossary.length) {
-      const item = document.createElement("li");
-      item.className = "ai-review ai-review-glossary";
- 
-      const heading = document.createElement("span");
-      heading.className = "ai-review-src";
-      heading.textContent = "What these words mean";
-      item.append(heading);
- 
-      const terms = document.createElement("dl");
-      terms.className = "ai-glossary";
- 
-      reviews.glossary.forEach((entry) => {
-        const term = document.createElement("dt");
-        term.textContent = entry.term;
- 
-        const meaning = document.createElement("dd");
-        meaning.textContent = entry.meaning;
- 
-        terms.append(term, meaning);
-      });
- 
-      item.append(terms);
-      reviewList.append(item);
-    }
- 
-    // 2. What people report.
-    if (reviews.summary) {
-      const item = document.createElement("li");
-      item.className = "ai-review ai-review-summary";
- 
-      const heading = document.createElement("span");
-      heading.className = "ai-review-src";
-      heading.textContent = "What people are saying";
- 
-      const text = document.createElement("p");
-      text.className = "ai-review-quote";
-      text.textContent = reviews.summary;
- 
-      item.append(heading, text);
-      reviewList.append(item);
-    }
- 
-    // 3. Nothing to look up. Saying so plainly beats a guess: for an ad
-    // promising a result, the missing name is itself the finding.
-    if (reviews.no_entity) {
-      const item = document.createElement("li");
-      item.className = "ai-review ai-review-empty";
- 
-      const text = document.createElement("p");
-      text.className = "ai-review-quote";
-      text.textContent =
-        "There is no company or product name in this ad to look up. " +
-        "For an ad promising a result, that is worth noticing on its own — " +
-        "a seller willing to be checked will normally say who they are.";
- 
-      item.append(text);
-      reviewList.append(item);
-    }
- 
-    // 4. The sources themselves.
-    (reviews.items || []).forEach((review) => {
-      const item = document.createElement("li");
-      item.className = "ai-review";
- 
-      const source = document.createElement("span");
-      source.className = "ai-review-src";
-      source.textContent = review.rating
-        ? `${review.source} · ${review.rating}`
-        : review.source;
- 
-      // Affiliate pages are kept — sometimes the most candid source — but the
-      // reader is told.
-      if (review.flags && review.flags.length) {
-        const flag = document.createElement("span");
-        flag.className = "ai-review-flag";
-        flag.textContent = review.flags.join(", ");
-        source.append(" ", flag);
-      }
- 
-      const quote = document.createElement("p");
-      quote.className = "ai-review-quote";
-      quote.textContent = `“${review.quote}”`;
- 
-      item.append(source, quote);
- 
-      if (review.url) {
-        const link = document.createElement("a");
-        link.className = "ai-review-link";
-        link.href = review.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = "Read the discussion →";
-        item.append(link);
-      }
- 
-      reviewList.append(item);
     });
 
     // Full explanation

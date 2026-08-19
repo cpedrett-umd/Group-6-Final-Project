@@ -211,14 +211,6 @@ export function analysisFixture(overrides = {}) {
       message: "This ad uses 2 pressure tactics. Nothing requires a decision today.",
       count: 2,
     },
-    reviews: {
-      mock: true,
-      notice: "Sample data — the review-insight layer is not built yet.",
-      items: [
-        { source: "Trustpilot", rating: "2.1★", quote: "Auto-billed monthly." },
-        { source: "Reddit · r/scams", rating: null, quote: "14 threads since March." },
-      ],
-    },
     ...overrides,
   };
 }

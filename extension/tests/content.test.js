@@ -669,17 +669,6 @@ describe("rendering results", () => {
     assert.equal(inResult(env, ".ai-readback").hidden, true);
   });
 
-  it("marks the review panel as sample data", async () => {
-    const env = await renderWith(analysisFixture());
-
-    assert.equal(inResult(env, ".ai-mock-badge").hidden, false);
-    assert.match(inResult(env, ".ai-mock-notice").textContent, /not built yet/);
-    assert.equal(
-      env.shadow.querySelectorAll('[data-state="result"] .ai-review').length,
-      2
-    );
-  });
-
   it("treats ad copy as text, never as markup", async () => {
     const env = await renderWith(
       analysisFixture({

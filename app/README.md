@@ -16,7 +16,6 @@ app/
 ├── ocr.py           image bytes -> text (VLM preferred, RapidOCR fallback), with space repair
 ├── vlm_ocr.py       VLM transcription backend (transcription-only prompt, needs OPENAI_API_KEY)
 ├── tactics.py       trigger-phrase lexicon + plain-language copy
-├── reviews.py       review-insight layer: retrieval + summary, sample-data fallback
 ├── requirements.txt
 └── static/          index.html, styles.css, app.js, demo-page.html
 ```
@@ -126,17 +125,6 @@ explanation*, so nothing about the ranking is hidden.
 This is the one place the demo deviates from the wireframe's implied behavior,
 and the badges make the deviation visible rather than papering over it.
 
-## The review-insight layer
-
-**"What real customers say"** (`reviews.py`) runs live when API keys are set:
-an OpenAI glossary of authority-lending terms, Tavily web search shaped as
-complaint queries, source-independence ranking (advertiser-owned domains
-excluded, affiliate content flagged), and a summary grounded only in retrieved
-passages, with links. It needs `OPENAI_API_KEY` and `TAVILY_API_KEY`; without
-them — or on any failure — it degrades to hard-coded sample quotes flagged
-`mock: true`, and the UI renders a *sample data* badge over the section, so a
-demo never breaks and mock data is never mistaken for real evidence.
-
 ## Notes on OCR
 
 Image extraction tries the VLM first (`vlm_ocr.py`, transcription-only prompt —
@@ -179,8 +167,7 @@ fresh clone runs green. See [tests/README.md](../tests/README.md).
   "source": { "mode": "image", "ocr": { "confidence": 0.98, "repaired": false } },
   "prediction": { "label": "Urgency", "confidence": 0.91, "distribution": [ ... ] },
   "tactics": [ { "display": "Urgency", "sources": ["model", "phrase"], "phrases": [ ... ] } ],
-  "summary": { "headline": "Take your time.", "count": 5 },
-  "reviews": { "mock": true, "items": [ ... ] }
+  "summary": { "headline": "Take your time.", "count": 5 }
 }
 ```
 

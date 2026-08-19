@@ -57,12 +57,9 @@ These exist because they caught real bugs:
 - **Oversized uploads return 413, not 500.** Werkzeug raises
   `RequestEntityTooLarge` while parsing, inside the route's `try`, where the
   generic handler was swallowing it.
-- **A clean ad reports nothing.** The dataset has no `Neutral` class, so the
-  model must name a tactic for every ad. Without the low-confidence guard, a
-  bakery's opening-hours ad reads as "This ad uses 1 pressure tactic."
-- **Review quotes are always flagged `mock`.** If that ever silently flips, the
-  UI drops its *sample data* badge and starts presenting invented quotes as
-  real.
+- **A clean ad reports nothing.** Between the `Neutral` class and the
+  low-confidence guard, a bakery's opening-hours ad must not read as
+  "This ad uses 1 pressure tactic."
 
 ## Extension tests
 
