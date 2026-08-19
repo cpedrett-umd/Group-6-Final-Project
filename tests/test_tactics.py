@@ -9,7 +9,9 @@ import pytest
 
 import tactics
 
-# The dataset's seven classes, from ads_dataset_labeled.csv.
+# The dataset's seven tactic classes, from ads_dataset_labeled.csv. The model
+# also carries "Neutral", but it is the absence of a tactic: it gets a display
+# name and nothing else, so it is asserted separately below.
 DATASET_LABELS = [
     "Authority Manipulation",
     "Exaggerated Claims",
@@ -58,9 +60,16 @@ def test_every_dataset_label_has_copy(label):
     assert label in tactics.TRIGGER_PATTERNS
 
 
+def test_neutral_has_a_display_name_and_no_tactic_copy():
+    """Neutral renders as a verdict, never as a detected-tactic row."""
+    assert tactics.NEUTRAL_LABEL in tactics.DISPLAY_NAMES
+    assert tactics.NEUTRAL_LABEL not in tactics.PHRASE_TEMPLATES
+    assert tactics.NEUTRAL_LABEL not in tactics.TRIGGER_PATTERNS
+
+
 def test_no_extra_labels_in_copy_tables():
     """Guards against a typo'd key that would silently never be used."""
-    assert set(tactics.DISPLAY_NAMES) == set(DATASET_LABELS)
+    assert set(tactics.DISPLAY_NAMES) == set(DATASET_LABELS) | {tactics.NEUTRAL_LABEL}
     assert set(tactics.PHRASE_TEMPLATES) == set(DATASET_LABELS)
     assert set(tactics.GENERIC_EXPLANATIONS) == set(DATASET_LABELS)
     assert set(tactics.TRIGGER_PATTERNS) == set(DATASET_LABELS)

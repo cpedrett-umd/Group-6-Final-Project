@@ -373,17 +373,27 @@ def test_oversized_upload_is_rejected(client):
 
 @pytest.mark.model
 @pytest.mark.slow
-def test_reviews_are_always_flagged_as_mock(client, wireframe_ad):
-    """The layer isn't built. If this ever returns mock=False silently, the UI
-    drops its "sample data" badge and starts presenting invented quotes as real."""
+def test_reviews_never_look_live_without_api_keys(client, wireframe_ad, monkeypatch):
+    """Without OPENAI_API_KEY and TAVILY_API_KEY the live layer can't run.
+    The response must be either the sample data (mock=True, so the UI shows its
+    "sample data" badge) or an honest empty no-entity result — never quotes
+    presented as real evidence."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
     payload = client.post("/api/analyze", json={"text": wireframe_ad}).get_json()
 
-    assert payload["reviews"]["mock"] is True
-    assert payload["reviews"]["notice"]
-    assert len(payload["reviews"]["items"]) >= 1
+    reviews = payload["reviews"]
+    assert reviews["notice"]
 
-    for item in payload["reviews"]["items"]:
-        assert set(item) >= {"source", "quote"}
+    if reviews["mock"]:
+        assert len(reviews["items"]) >= 1
+        for item in reviews["items"]:
+            assert set(item) >= {"source", "quote"}
+    else:
+        # No brand could be extracted without the VLM, so there is nothing to
+        # search: the honest answer is no items at all.
+        assert reviews.get("no_entity") is True
+        assert reviews["items"] == []
 
 
 # ── Failure modes ───────────────────────────────────────────────

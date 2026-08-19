@@ -16,6 +16,7 @@ EXPECTED_LABELS = {
     "Exaggerated Claims",
     "FOMO",
     "Fear Appeals",
+    "Neutral",
     "Scarcity",
     "Social Proof",
     "Urgency",
@@ -29,12 +30,16 @@ def test_is_ready_when_weights_exist():
 def test_returns_the_documented_shape(wireframe_ad):
     result = predict.predict(wireframe_ad)
 
-    assert set(result) == {"label", "confidence", "distribution", "truncated"}
+    assert set(result) == {
+        "label", "confidence", "distribution", "truncated", "windows", "token_count",
+    }
     assert isinstance(result["label"], str)
     assert isinstance(result["truncated"], bool)
+    assert isinstance(result["windows"], int)
+    assert isinstance(result["token_count"], int)
 
 
-def test_distribution_covers_all_seven_classes(wireframe_ad):
+def test_distribution_covers_all_eight_classes(wireframe_ad):
     result = predict.predict(wireframe_ad)
 
     labels = {entry["label"] for entry in result["distribution"]}
