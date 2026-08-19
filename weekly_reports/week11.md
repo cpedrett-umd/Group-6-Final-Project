@@ -30,9 +30,15 @@ north_star:
   notes and per-slide timings for the live demo.
   → [`AdInsight_Final_Presentation.pptx`](../docs/AdInsight_Final_Presentation.pptx) /
   [`.pdf`](../docs/AdInsight_Final_Presentation.pdf)
+- **Removed the review-insight layer.** Its retrieval was not returning reliable
+  results and there was no time to fix it before the final demo, so it was cut
+  from the app and the extension rather than shipped broken. The report, deck
+  and READMEs were updated to say it was prototyped but not shipped.
+  (evidence: commit
+  [684caa9](https://github.com/cpedrett-umd/Group-6-Final-Project/commit/684caa9))
 
-No model, data, or application work this week — the build was frozen after week
-10 and the whole week went to the two deliverables above.
+No model or data work this week — the build was frozen after week 10, and apart
+from the removal above the whole week went to the deliverables.
 
 ## User / validation learning
 
