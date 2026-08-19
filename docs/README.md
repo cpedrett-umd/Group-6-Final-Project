@@ -17,7 +17,7 @@ Jonathan Kim (Data Pipeline · Preprocessing · Baseline Model)
 
 | File | What it is |
 |---|---|
-| `slides.pdf` | Final presentation slides (11 slides, one per rubric area) |
+| `AdInsight_Final_Presentation.pdf` | Final presentation slides (11 slides, one per rubric area) |
 | `AdInsight_Final_Presentation.pptx` | Same deck with speaker notes, for presenting |
 | `AdInsight_Final_Report.pdf` | Final written report, sectioned by the five rubric areas |
 | `AdInsight_Final_Report.docx` | Report source document |

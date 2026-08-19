@@ -4,7 +4,7 @@
 
 An NLP system for detecting emotionally manipulative advertising tactics.
 
-[Report](docs/AdInsight_Final_Report.pdf) | [Slides](docs/slides.pdf) | [Demo](app/README.md) |
+[Report](docs/AdInsight_Final_Report.pdf) | [Slides](docs/AdInsight_Final_Presentation.pdf) | [Demo](app/README.md) |
 
 **Group 6 — Final Project**
 [Shashank Ashoka](https://github.com/shashk09-coder), [Christopher Pedretti](https://github.com/cpedrett-umd), [Ciara Cameron](https://github.com/Ciaracam), [
@@ -212,7 +212,7 @@ Group-6-Final-Project/
 ├── docs/                                   # Final deliverables and reference material
 │   ├── README.md                           # Submission guide — summary + setup
 │   ├── AdInsight_Final_Report.pdf / .docx  # Final written report
-│   ├── slides.pdf                          # Final presentation slides
+│   ├── AdInsight_Final_Presentation.pdf    # Final presentation slides
 │   ├── AdInsight_Final_Presentation.pptx   # Same deck with speaker notes
 │   ├── Group6_MidSemester_Presentation.pptx
 │   ├── project_overview.pdf
