@@ -1,0 +1,21 @@
+# Demo front end. Install on top of ../modeling/requirements.txt, which
+# supplies torch + transformers for the classifier itself.
+# (../requirements.txt at the repo root installs everything at once.)
+
+flask>=3.0                  # API + static file serving
+
+# Native window for desktop.py. Platform backends install automatically:
+# pythonnet + WebView2 on Windows, pyobjc + WebKit on macOS, GTK on Linux.
+pywebview>=5.0
+
+# OCR — turns an uploaded ad screenshot into text at request time.
+# Pip-only (no system installer); downloads ~15MB of ONNX models on first run.
+rapidocr-onnxruntime>=1.3
+
+# Image decoding in ocr.py. RapidOCR pulls it in too, but ocr.py imports it
+# directly, so it is declared rather than relied on transitively.
+pillow>=10.0
+
+# Repairs OCR lines whose spaces collapsed ("70%offbeforethesupplementban").
+# Optional: ocr.py falls back to the unrepaired text if it isn't installed.
+wordninja>=2.0
