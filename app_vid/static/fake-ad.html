@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ad creative</title>
+<style>
+  /* Stands in for a third-party ad creative. Loaded into an iframe on the
+     demo page so the extension's capture path — which exists for iframes the
+     content script cannot read — has a local, safe target to practise on. */
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    height: 100vh;
+    background: linear-gradient(120deg, #1a3a47, #0d2129);
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+  }
+  .inner { padding: 12px; }
+  h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: .5px; }
+  p { margin: 0 0 12px; font-size: 15px; color: #cfe3ea; }
+  .cta {
+    display: inline-block;
+    padding: 9px 22px;
+    border-radius: 5px;
+    background: #e2900f;
+    color: #14232b;
+    font-weight: 800;
+    font-size: 15px;
+  }
+</style>
+</head>
+<body>
+  <div class="inner">
+    <h1>FINAL HOURS: 70% OFF</h1>
+    <p>Clinically proven MemoryMax Pro. Only 7 bottles left — act now!</p>
+    <span class="cta">SHOP NOW</span>
+  </div>
+</body>
+</html>

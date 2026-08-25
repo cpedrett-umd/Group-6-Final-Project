@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Health News — What doctors want you to know about memory</title>
+<style>
+  /* Deliberately styled as an ordinary news site, not as AdInsight. The
+     extension's overlay has to look like it belongs to a different product
+     than the page underneath it. */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #fff;
+    color: #1c1c1c;
+    font: 18px/1.7 Georgia, "Times New Roman", serif;
+  }
+  .masthead {
+    border-bottom: 3px solid #1c1c1c;
+    padding: 18px 0 12px;
+    margin-bottom: 30px;
+  }
+  .masthead-inner, .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .masthead h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: -.5px;
+    font-family: Georgia, serif;
+  }
+  .masthead p { margin: 4px 0 0; color: #666; font-size: 14px; font-family: Arial, sans-serif; letter-spacing: 2px; text-transform: uppercase; }
+  article h2 { font-size: 34px; line-height: 1.25; margin: 0 0 10px; }
+  .byline { color: #666; font-size: 15px; font-family: Arial, sans-serif; margin: 0 0 28px; }
+  p { margin: 0 0 20px; }
+
+  /* The sponsored ad the extension is meant to catch. Marked up the way real
+     ad slots are -- a "sponsored" label and an ad-ish class name -- so the
+     content script's heuristic finds it here the same way it would in the wild. */
+  .ad-slot {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 22px;
+    margin: 34px 0;
+    background: #fafafa;
+    font-family: Arial, sans-serif;
+  }
+  .ad-slot .sponsored {
+    margin: 0 0 6px;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .ad-slot h3 { margin: 0 0 14px; font-size: 22px; }
+  .ad-slot .shot {
+    display: grid;
+    place-items: center;
+    height: 150px;
+    margin-bottom: 16px;
+    border: 1px solid #e3e3e3;
+    border-radius: 4px;
+    background: #f0f0f0;
+    color: #999;
+    font-size: 14px;
+  }
+  .ad-slot .copy { font-size: 17px; line-height: 1.55; margin: 0 0 18px; }
+  .ad-slot .cta {
+    display: inline-block;
+    padding: 12px 26px;
+    border: 0;
+    border-radius: 4px;
+    background: #1a3a47;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tip {
+    max-width: 720px;
+    margin: 0 auto 34px;
+    padding: 14px 18px;
+    border-left: 4px solid #15708d;
+    background: #f1f8fa;
+    color: #24505d;
+    font: 15px/1.6 Arial, sans-serif;
+  }
+  footer { margin: 50px 0 60px; color: #999; font: 14px Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p>Your Local News</p>
+    <h1>Health</h1>
+  </div>
+</header>
+
+<div class="wrap">
+  <p class="tip"><strong>Extension demo page.</strong> With the AdInsight extension loaded,
+  the sponsored block below gets an <em>Analyze this ad</em> button. You can also
+  highlight any text on this page, or right-click an image, and analyze that instead.</p>
+</div>
+
+<div class="wrap">
+  <article>
+    <h2>What researchers actually know about memory and aging</h2>
+    <p class="byline">By Staff Reporter · 6 min read</p>
+
+    <p>Mild forgetfulness is a normal part of aging, and researchers have spent
+    decades separating ordinary changes from the early signs of something more
+    serious. The distinction matters, because the gap between the two is where
+    most confusion — and most marketing — lives.</p>
+
+    <p>Sleep, exercise, and social contact remain the interventions with the
+    strongest evidence behind them. None of them are dramatic, and none of them
+    work quickly. That is precisely why they are rarely the subject of
+    advertising.</p>
+
+    <div class="ad-slot">
+      <p class="sponsored">Sponsored</p>
+      <h3>NeuroVital Labs</h3>
+      <div class="shot">product photo</div>
+      <p class="copy"><strong>FINAL HOURS:</strong> Doctor-recommended MemoryMax Pro
+      reverses memory loss in 14 days. Only 7 bottles left — 70% off before the
+      supplement ban. Trusted by millions of satisfied customers.</p>
+      <button class="cta" type="button">Shop Now</button>
+    </div>
+
+    <p>Supplement marketing frequently borrows the vocabulary of clinical
+    research without the substance of it. Phrases such as "clinically proven"
+    carry no regulatory definition in this context, and the studies invoked are
+    often small, unpublished, or funded by the seller.</p>
+
+    <!-- Iframe ad fixture: named so the extension's ad-frame detector treats
+         it like a real third-party slot (safeframe), exercising the hover
+         sensor + screenshot-capture path against a local, safe target. -->
+    <div style="margin:34px 0; text-align:center;">
+      <iframe src="/fake-ad" name="safeframe-demo-slot" title="demo ad slot"
+              width="728" height="120" style="border:1px solid #ddd; max-width:100%;"
+              scrolling="no"></iframe>
+    </div>
+
+    <!-- Labeled native ad fixture: no ad-ish class names anywhere — the only
+         tell is the visible "Sponsored" caption, like Yahoo's feed cards. -->
+    <div class="feed-card" style="border:1px solid #ddd; border-radius:6px; padding:20px; margin:34px 0; font-family:Arial,sans-serif;">
+      <p style="margin:0 0 6px; color:#888; font-size:12px; letter-spacing:1.2px; text-transform:uppercase;">Sponsored</p>
+      <h3 style="margin:0 0 10px; font-size:21px;">Seniors born before 1965 rush to claim this benefit</h3>
+      <p style="margin:0; font-size:16px; line-height:1.5;">Thousands are already claiming theirs — don't miss out before the
+      deadline. Experts approved, guaranteed results, and spots are limited.</p>
+    </div>
+
+    <p>Consumer advocates suggest a simple habit: before acting on any health
+    claim in an advertisement, look for the specific study, the specific
+    researcher, and the specific institution. If none of the three can be
+    found, the claim is doing rhetorical work rather than scientific work.</p>
+
+    <p>That advice is easier to state than to follow in the moment, which is
+    what makes time pressure such an effective sales device. An offer that
+    expires tonight is an offer that discourages exactly the checking that
+    would undermine it.</p>
+  </article>
+
+  <footer>© Your Local News — a fictional page built for demonstrating AdInsight.</footer>
+</div>
+
+</body>
+</html>
